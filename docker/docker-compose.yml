@@ -1,0 +1,108 @@
+services:
+  notifier-db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-fastapi_db}
+      #ports:
+      #- "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ../                    # プロジェクトルート
+      dockerfile: docker/Dockerfile   # context からの相対パス
+    ports:
+      - "8080:8000"
+    environment:
+      # ===========================================
+      # 開発環境設定
+      # ===========================================
+      ENVIRONMENT: DEVELOP
+      DEBUG: ${DEBUG:-False}
+      LOG_LEVEL: INFO
+
+      # ===========================================
+      # セキュリティ設定（開発用 - 本番では使用しないこと）
+      # ===========================================
+      SECRET_KEY: ${SECRET_KEY:-dev-only-secret-key-change-in-production}
+      # CORS: 開発環境のみ * を許可、本番では具体的なオリジンを指定
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+
+      # ===========================================
+      # API Keys（開発用 - 環境変数で上書き可能）
+      # ===========================================
+      X_NOTIFICATION_API_KEY: ${X_NOTIFICATION_API_KEY:-dev-notification-api-key}
+
+      # ===========================================
+      # オペレーターID検証設定
+      # ===========================================
+      OPERATOR_ID_VERIFICATION_ENABLED: ${OPERATOR_ID_VERIFICATION_ENABLED:-false}
+
+      # ===========================================
+      # L3 認証設定（開発用 - 環境変数で上書き可能）
+      # ===========================================
+      L3_BASE_URL: ${L3_BASE_URL:-https://dev-auth.example.com}
+      L3_INTROSPECT_ENDPOINT: /auth/token/introspect
+      L3_API_KEY: ${L3_API_KEY:-dev-l3-api-key}
+      L3_CLIENT_ID: ${L3_CLIENT_ID:-dev-client-id}
+      L3_CLIENT_SECRET: ${L3_CLIENT_SECRET:-dev-client-secret}
+
+      # ===========================================
+      # 認可サービス設定
+      # ===========================================
+      AUTHZ_ENABLED: "false"
+      AUTHZ_BASE_URL: ${AUTHZ_BASE_URL:-http://openfga:8080}
+      AUTHZ_OPENFGA_STORE_ID: ${AUTHZ_OPENFGA_STORE_ID:-01KFY9RF3HQM123HVZ47EJTYP8}
+      AUTHZ_OPENFGA_MODEL_ID: ${AUTHZ_OPENFGA_MODEL_ID:-01KFY9RF3YQ9EF8GZEYBKPAWH0}
+
+      # ===========================================
+      # データベース設定（ローカルDocker用）
+      # ===========================================
+      POSTGRES_HOST: notifier-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: fastapi_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      DB_CONNECT_TIMEOUT: ${DB_CONNECT_TIMEOUT:-10}
+      DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-10}
+
+      # ===========================================
+      # ログ設定（開発環境）
+      # ===========================================
+      LOG_JSON_FORMAT: "false"     # 人間が読みやすい形式
+      LOG_FILE_ENABLED: "false"    # ファイル出力なし
+      LOG_COLORIZE: "true"         # カラーログ有効
+      APP_NAME: notifier-api
+      SQLALCHEMY_LOG_LEVEL: ERROR  # SQLログは抑制
+      UVICORN_LOG_LEVEL: debug
+
+    # ログドライバー設定（オプション）
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "app=notifier-api"
+
+    depends_on:
+      notifier-db:
+        condition: service_healthy
+    volumes:
+      - ../app:/app/app               # docker/ から見た app/ の位置
+      - ../migrations:/app/migrations # alembic.iniはmigrations配下に含まれる
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+networks:
+  default:
+    name: shared-network
+
+volumes:
+  postgres_data:
