@@ -72,7 +72,7 @@ class ConfirmedTarget(BaseSchema):
 # --- データ済み受信者モデル ---
 class DataConfirmTarget(BaseSchema):
     target_id: str = Field(..., description="受信者ID")
-    status: DataReceiveStatus = Field(..., description="データ受領状態（received: 確認済, not_received: 未確認, deleted: 削除済）")
+    status: DataReceiveStatus = Field(..., description="データ受領状態（received: 確認済, not_received: 未確認）")
     updated_at: datetime = Field(..., description="更新日時")
 
     @field_validator('status', mode='before')
@@ -157,12 +157,12 @@ class Notification(NotificationBase):
     notification_confirmed_targets: List[ConfirmedTarget] = Field(
         default_factory=list,
         validation_alias=AliasChoices("notification_confirmed_targets", "confirmations"),
-        description="通知受信者の詳細リスト（ID・ステータス（confirmed: 確認, not_confirmed: 未確認, deleted: 削除済み）・確認時刻）"
+        description="通知受信者の詳細リスト（ID・ステータス（received: 確認済, not_received: 未確認, deleted: 削除済）・確認時刻）"
     )
     data_confirmed_targets: List[DataConfirmTarget] = Field(
         default_factory=list,
         validation_alias=AliasChoices("data_confirmed_targets", "data_confirmations"),
-        description="データ受信者の詳細リスト（ID・ステータス（confirmed: 確認, not_confirmed: 未確認, deleted: 削除済み）・確認時刻）"
+        description="データ受信者の詳細リスト（ID・ステータス（received: 確認済, not_received: 未確認）・確認時刻）"
     )
     created_at: datetime = Field(..., description="通知登録日時")
     updated_at: datetime = Field(..., description="通知更新日時")

@@ -55,7 +55,7 @@
 | ドキュメント | 説明 |
 |------------|------|
 | [基本設計](docs/basic_design.md) | システムアーキテクチャ、全体構成 |
-| [詳細設計](docs/detail_design.md) | API仕様、データモデル詳細 |
+| [詳細設計](docs/detail_design.md) | 詳細シーケンス、データ設計|
 | [OpenAPI仕様 (JSON)](docs/openapi/openapi.json) | API仕様（機械可読形式） |
 | [OpenAPI仕様 (HTML)](docs/openapi/openapi.html) | API仕様（ブラウザ閲覧用） |
 

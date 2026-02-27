@@ -22,7 +22,10 @@ from app.middleware import (
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="通知の登録・取得・更新・削除、および通知先リストの管理を行うAPIです。",
+    description="""
+## 変更履歴
+### version 1.0.0  2026/02
+""",
     version=settings.VERSION,
     log_level="info",
     access_log=True,

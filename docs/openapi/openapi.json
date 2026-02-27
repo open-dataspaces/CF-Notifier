@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Notifier API",
-    "description": "通知の登録・取得・更新・削除、および通知先リストの管理を行うAPIです。",
+    "description": "\n## 変更履歴\n### version 1.0.0  2026/02\n",
     "version": "1.0.0"
   },
   "paths": {
@@ -26,6 +26,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -35,16 +36,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -54,6 +56,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -455,6 +458,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -464,16 +468,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -483,6 +488,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -896,6 +902,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -905,16 +912,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -924,6 +932,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -1396,6 +1405,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -1405,16 +1415,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -1424,6 +1435,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -1855,6 +1867,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -1864,16 +1877,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -1883,6 +1897,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -2289,6 +2304,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -2298,16 +2314,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -2317,6 +2334,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -2736,6 +2754,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -2745,16 +2764,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -2764,6 +2784,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -3177,6 +3198,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -3186,16 +3208,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -3205,6 +3228,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -3677,6 +3701,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -3686,16 +3711,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -3705,6 +3731,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -4136,6 +4163,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -4145,16 +4173,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -4164,6 +4193,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -4580,6 +4610,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -4589,16 +4620,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -4608,6 +4640,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -5041,6 +5074,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "User-Agent"
             }
           },
@@ -5050,16 +5084,17 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
               "title": "X-Trackingid"
             }
           },
           {
             "name": "Accept-Language",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "ja-JP",
+              "minLength": 1,
               "title": "Accept-Language"
             }
           },
@@ -5069,6 +5104,7 @@
             "required": true,
             "schema": {
               "const": "application/json",
+              "type": "string",
               "title": "Content-Type"
             }
           },
@@ -5473,11 +5509,7 @@
             "description": "受信者ID"
           },
           "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NotificationStatus"
-              }
-            ],
+            "$ref": "#/components/schemas/NotificationStatus",
             "description": "通知確認状態（received: 確認済, not_received: 未確認, deleted: 削除済）"
           },
           "updated_at": {
@@ -5503,12 +5535,8 @@
             "description": "受信者ID"
           },
           "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DataReceiveStatus"
-              }
-            ],
-            "description": "データ受領状態（received: 確認済, not_received: 未確認, deleted: 削除済）"
+            "$ref": "#/components/schemas/DataReceiveStatus",
+            "description": "データ受領状態（received: 確認済, not_received: 未確認）"
           },
           "updated_at": {
             "type": "string",
@@ -5697,11 +5725,7 @@
             "description": "通知ID"
           },
           "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NotifStatus"
-              }
-            ],
+            "$ref": "#/components/schemas/NotifStatus",
             "description": "ステータス（enabled: 有効, disabled: 無効, deleted: 削除済み）"
           },
           "notification_confirmed_targets": {
@@ -5710,7 +5734,7 @@
             },
             "type": "array",
             "title": "Notification Confirmed Targets",
-            "description": "通知受信者の詳細リスト（ID・ステータス（confirmed: 確認, not_confirmed: 未確認, deleted: 削除済み）・確認時刻）"
+            "description": "通知受信者の詳細リスト（ID・ステータス（received: 確認済, not_received: 未確認, deleted: 削除済）・確認時刻）"
           },
           "data_confirmed_targets": {
             "items": {
@@ -5718,7 +5742,7 @@
             },
             "type": "array",
             "title": "Data Confirmed Targets",
-            "description": "データ受信者の詳細リスト（ID・ステータス（confirmed: 確認, not_confirmed: 未確認, deleted: 削除済み）・確認時刻）"
+            "description": "データ受信者の詳細リスト（ID・ステータス（received: 確認済, not_received: 未確認）・確認時刻）"
           },
           "created_at": {
             "type": "string",
@@ -5747,36 +5771,29 @@
       "NotificationCreate": {
         "properties": {
           "type_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
             "title": "Type Code",
             "description": "通知種別コード"
           },
           "type_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Type Name",
             "description": "通知種別名"
           },
           "title": {
             "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
             "title": "Title",
             "description": "通知タイトル"
           },
           "content": {
             "type": "string",
+            "minLength": 1,
             "title": "Content",
             "description": "通知内容"
           },
@@ -5811,12 +5828,16 @@
             "description": "データID"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
+          "type_code",
+          "type_name",
           "title",
           "content"
         ],
-        "title": "NotificationCreate"
+        "title": "NotificationCreate",
+        "description": "通知作成時に使うスキーマ"
       },
       "NotificationCreateResponse": {
         "properties": {
@@ -5912,11 +5933,15 @@
         "properties": {
           "name": {
             "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Name",
             "description": "通知先リスト名"
           },
           "owner_id": {
             "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Owner Id",
             "description": "リスト所有者ID"
           },
@@ -5925,10 +5950,12 @@
               "type": "string"
             },
             "type": "array",
+            "minItems": 1,
             "title": "Target Ids",
             "description": "通知受信者IDリスト"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name",
@@ -5996,11 +6023,15 @@
         "properties": {
           "name": {
             "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Name",
             "description": "通知先リスト名"
           },
           "owner_id": {
             "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Owner Id",
             "description": "リスト所有者ID"
           },
@@ -6009,10 +6040,12 @@
               "type": "string"
             },
             "type": "array",
+            "minItems": 1,
             "title": "Target Ids",
             "description": "通知受信者IDリスト"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name",
@@ -6050,11 +6083,14 @@
           },
           "title": {
             "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
             "title": "Title",
             "description": "通知タイトル"
           },
           "content": {
             "type": "string",
+            "minLength": 1,
             "title": "Content",
             "description": "通知内容"
           },
@@ -6095,14 +6131,11 @@
             "description": "通知ID"
           },
           "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NotifStatus"
-              }
-            ],
+            "$ref": "#/components/schemas/NotifStatus",
             "description": "ステータス（enabled: 有効, disabled: 無効, deleted: 削除済み）"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "title",
@@ -6217,6 +6250,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

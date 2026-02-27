@@ -76,7 +76,7 @@ generate_openapi_json_docker() {
     cd "${PROJECT_ROOT}/docker"
 
     # Check if container is running
-    if ! docker compose ps --status running | grep -q "fastapi"; then
+    if ! docker compose ps --status running | grep -q "app"; then
         log_info "Starting Docker containers..."
         docker compose up -d
         log_info "Waiting for container to be ready..."
@@ -84,7 +84,7 @@ generate_openapi_json_docker() {
     fi
 
     # Fetch from running container
-    curl -s http://localhost:8001/openapi.json | jq . > "${OPENAPI_JSON}"
+    curl -s http://localhost:8080/openapi.json | jq . > "${OPENAPI_JSON}"
 
     if [ -f "${OPENAPI_JSON}" ] && [ -s "${OPENAPI_JSON}" ]; then
         log_info "Generated: ${OPENAPI_JSON}"
