@@ -6,7 +6,6 @@
 ### (1) 通知先リスト作成、更新、取得、削除シーケンス
 
 ```mermaid 
-
 ---
 title: 通知先リスト作成、更新、取得、削除
 config:
@@ -25,6 +24,7 @@ end
 box データ流通システム:　コア機能
   participant CORE_L2 as データ流通(L2)
   participant CORE_L3 as 認証・認可(L3)
+  participant FGA as 認可(OpenFGA)
 end
 
 box Notifier
@@ -46,61 +46,76 @@ CORE_L3-->>P_SA: IDトークン+アクセストークン
 %% --- Create: 通知先リストの作成 ---
 alt 通知先リスト作成
   P->>P_SA: 通知先リスト作成
-  P_SA->>DIST: POST /api/v1/notification-targets<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  P_SA->>CORE_L2: POST /api/v1/notification-targets<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  CORE_L2->>DIST: POST /api/v1/notification-targets<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB1: 通知先リスト登録(INSERT)
   DIST_DB1-->>DIST: 作成結果
-  DIST-->>P_SA: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  DIST-->>CORE_L2: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  CORE_L2-->>P_SA: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
 end
 
 %% --- Update: 通知先リストの更新 ---
 alt 通知先リスト更新
   P->>P_SA: 通知先リスト更新
-  P_SA->>DIST: PUT /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  P_SA->>CORE_L2: PUT /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  CORE_L2->>DIST: PUT /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB1: 通知先リスト情報を更新(UPDATE)
   DIST_DB1-->>DIST: 更新結果
-  DIST-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
 end
 
 %% --- Retrieve: 通知先リストの取得 ---
 alt 通知先リスト取得
   P->>P_SA: 通知先リスト取得
-  P_SA->>DIST: GET /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン)
+  P_SA->>CORE_L2: GET /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン)
+  CORE_L2->>DIST: GET /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB1: 指定したIDの通知先リストを取得(SELECT)
   DIST_DB1-->>DIST: 指定した通知先リスト情報
-  DIST-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
 end
 
 %% --- Delete: 通知先リストの削除 ---
 alt 通知先リスト削除
   P->>P_SA: 通知先リスト削除
-  P_SA->>DIST: DELETE /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン)
+  P_SA->>CORE_L2: DELETE /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン)
+  CORE_L2->>DIST: DELETE /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB1: 指定した通知先リストを削除(DELETE)
   DIST_DB1-->>DIST: 削除結果
-  DIST-->>P_SA: 204 No Content
+  DIST-->>CORE_L2: 204 No Content
+  CORE_L2-->>P_SA: 204 No Content
 end
 
 %% --- Retrieve: 通知先リストの一覧取得 ---
 alt 通知先リスト一覧取得
   P->>P_SA: 通知先リスト一覧取得
-  P_SA->>DIST: GET /api/v1/notification-targets<BR>(アクセストークン)
+  P_SA->>CORE_L2: GET /api/v1/notification-targets<BR>(アクセストークン)
+  CORE_L2->>DIST: GET /api/v1/notification-targets<BR>(アクセストークン)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB1: 通知先リストを取得(SELECT)
   DIST_DB1-->>DIST: 通知先リスト一覧
-  DIST-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
 end
 
 ```
@@ -108,7 +123,6 @@ end
 ### (2) 通知登録、更新、取得、削除シーケンス
 
 ```mermaid 
-
 ---
 title: 通知登録、更新、取得、削除
 config:
@@ -127,6 +141,7 @@ end
 box データ流通システム:　コア機能
   participant CORE_L2 as データ流通(L2)
   participant CORE_L3 as 認証・認可(L3)
+  participant FGA as 認可(OpenFGA)
 end
 
 box Notifier
@@ -152,7 +167,8 @@ alt 通知情報登録
   CORE_L2->>DIST: POST /api/v1/notifications <BR>(アクセストークン,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB2: 通知情報登録(INSERT)
   DIST_DB2-->>DIST: 登録結果
   DIST-->>CORE_L2: 201 Created<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
@@ -166,7 +182,8 @@ alt 通知情報更新
   CORE_L2->>DIST: PUT /api/v1/notifications/{通知ID}<BR>(通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB2: 指定した通知情報更新(UPDATE)
   DIST_DB2-->>DIST: 更新結果
   DIST-->>CORE_L2: 200 OK<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
@@ -180,7 +197,8 @@ alt 通知情報取得
   CORE_L2->>DIST: GET /api/v1/notifications/{通知ID}
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB2: 指定した通知詳細取得(GET)
   DIST_DB2-->>DIST: 取得結果
   DIST-->>CORE_L2: 200 OK<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
@@ -194,7 +212,8 @@ alt 通知情報削除
   CORE_L2->>DIST: DELETE /api/v1/notifications/{通知ID}
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB2: 指定した通知情報削除(DELETE)
   DIST_DB2-->>DIST: 削除結果
   DIST-->>CORE_L2: 204 No Content
@@ -205,7 +224,6 @@ end
 ### (3) 通知一覧取得シーケンス
 
 ```mermaid 
-
 ---
 title: 通知一覧取得
 config:
@@ -224,6 +242,7 @@ end
 box データ流通システム:　コア機能
   participant CORE_L2 as データ流通(L2)
   participant CORE_L3 as 認証・認可(L3)
+  participant FGA as 認可(OpenFGA)
 end
 
 box Notifier
@@ -249,7 +268,8 @@ alt 通知一覧取得
   CORE_L2->>DIST: GET /api/v1/notifications<BR>(アクセストークン)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST-->>DIST: 認可確認
+  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
   DIST-->>DIST: アクセストークンからユーザID取得
   DIST->>DIST_DB2: ユーザIDに紐づく通知情報を取得(SELECT)
   DIST_DB2-->>DIST: 通知情報
@@ -262,7 +282,6 @@ end
 ### (4) 通知確認状態更新​シーケンス
 
 ```mermaid 
-
 ---
 title: 通知確認状態更新​
 config:
@@ -281,6 +300,7 @@ end
 box データ流通システム:　コア機能
   participant CORE_L2 as データ流通(L2)
   participant CORE_L3 as 認証・認可(L3)
+  participant FGA as 認可(OpenFGA)
 end
 
 box Notifier
@@ -306,9 +326,10 @@ C->>C_SA: 通知確認状態更新(任意のタイミング)
 C_SA->>CORE_L2:　PUT /api/v1/notifications/{通知ID}/receive<BR>(アクセストークン)
 CORE_L2->>DIST:　PUT /api/v1/notifications/{通知ID}/receive<BR>(アクセストークン)
 
-DIST->>CORE_L3: アクセストークン検証/権限確認
+DIST->>CORE_L3: アクセストークン検証
 CORE_L3-->>DIST: OK
-DIST-->>DIST: 認可確認
+DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+FGA-->>DIST: 認可結果 (allowed)
 DIST->>DIST: アクセストークンから通知先ユーザIDを取得
 DIST->>DIST_DB2:  指定した通知IDの通知確認済み​受信者​リストのステータスを受信済みに更新​(UPDATE)
 DIST_DB2-->>DIST: 更新結果
@@ -320,7 +341,6 @@ end
 ### (5) データ受領状態更新シーケンス
 
 ```mermaid 
-
 ---
 title: データ受領状態更新
 config:
@@ -339,6 +359,7 @@ end
 box データ流通システム:　コア機能
   participant CORE_L2 as データ流通(L2)
   participant CORE_L3 as 認証・認可(L3)
+  participant FGA as 認可(OpenFGA)
 end
 
 box Notifier
@@ -363,9 +384,10 @@ C->>C_SA: データ受領状態更新(データ受領時に実行)
 C_SA->>CORE_L2:　PUT /api/v1/notifications/{通知ID}/data/{データID}/receive<BR>(アクセストークン)
 CORE_L2->>DIST:　PUT /api/v1/notifications/{通知ID}/data/{データID}/receive<BR>(アクセストークン)
 
-DIST->>CORE_L3: アクセストークン検証/権限確認
+DIST->>CORE_L3: アクセストークン検証
 CORE_L3-->>DIST: OK
-DIST-->>DIST: 認可確認
+DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
+FGA-->>DIST: 認可結果 (allowed)
 DIST->>DIST: アクセストークンから通知先ユーザIDを取得
 DIST->>DIST_DB2: 指定した通知ID・データIDのデータ受領状態を受領済みに更新(UPDATE)
 DIST_DB2-->>DIST: 更新結果
@@ -775,6 +797,18 @@ logger.info(
 | HTTPException | WARNING/ERROR | status_code, detail |
 | DatabaseError | ERROR | error, traceback |
 | 未処理例外 | ERROR | traceback |
+
+
+---
+
+## 4. 改訂履歴
+
+| 版   | 日付         | 変更点                                                                                                       |
+| --- | ---------- | --------------------------------------------------------------------------------------------------------- |
+| 1.0 | 2026-02-28 | 第1.0版 |
+| 1.1 | 2026-08-31 | 第1.1版 |
+
+---
 
 
 
