@@ -4,7 +4,7 @@
 
 ### 1.1 目的・背景
 
-本ソフトウェアは、ウラノス・エコシステム・データスペーシズの共通機能（Common Functionalities）の一つとして動作し、
+本ソフトウェアは、Open Data Spaces(ODS)の共通機能（Common Functionalities）の一つとして動作し、
 提供者からのデータ配信の通知を管理するAPIサーバである。
 通知先リストを作成・更新・削除し、通知送信、通知確認、通知状態更新、データ状態更新を可能とする。
 
@@ -22,7 +22,7 @@
 ### 1.4 前提・制約
 
 * 認証機能は、アイデンティティレイヤ（L3）との連携を前提とするため、本システムの対象外
-* 通信は **TLS** 前提（Ingress で終端、Pod→DB も TLS）。
+* 通信は **TLS** 前提（外部のプロキシ／ロードバランサーで終端、API→DB間も TLS）。
 * TLS終端は、本ソフトウェアの外部で行うため対象外
 * 認可ポリシーは OpenFGAを使用し管理
 
@@ -35,25 +35,21 @@
 graph TB
     Users[エンドユーザー] --> EXT_API
     
-    subgraph AWS["AWS"]
-        ALB --> EKS_SVC[Kubernetes Service]
+    subgraph INFRA["実行環境"]
+        LB[ロードバランサー] --> API1[FastAPI サーバ 1]
+        LB --> API2[FastAPI サーバ 2]
         
-        subgraph EKS["Amazon EKS クラスター"]
-            EKS_SVC --> API1[FastAPI Pod 1]
-            EKS_SVC --> API2[FastAPI Pod 2]
-            
-            subgraph DEV1["対象1: NotifierRESTAPI"]
-                API1
-                API2
-            end
+        subgraph DEV1["対象1: NotifierRESTAPI"]
+            API1
+            API2
         end
-      subgraph DEV2["対象: NotifierDB"]
-          RDS[(PostgreSQL RDS)]
-      end
+        subgraph DEV2["対象: NotifierDB"]
+            DB[(PostgreSQL)]
+        end
     end
 
-    API1 -.-> RDS
-    API2 -.-> RDS
+    API1 -.-> DB
+    API2 -.-> DB
     
     subgraph EXTERNAL["L2,L3"]
         EXT_API[REST API]
@@ -61,16 +57,16 @@ graph TB
     
     API1 -.-> EXT_API
     API2 -.-> EXT_API
-    EXT_API --> ALB
+    EXT_API --> LB
     
     classDef devTarget fill:#ffe6e6,stroke:#ff4444,stroke-width:3px
-    classDef awsService fill:#e6f3ff,stroke:#0066cc,stroke-width:2px
+    classDef infraService fill:#e6f3ff,stroke:#0066cc,stroke-width:2px
     classDef database fill:#fff2e6,stroke:#ff8800,stroke-width:2px
     classDef external fill:#f0f0f0,stroke:#888888,stroke-width:1px
     
     class DEV1,DEV2 devTarget
-    class AWS,EKS,ALB,EKS_SVC awsService
-    class RDS database
+    class INFRA,LB infraService
+    class DB database
     class EXTERNAL,EXT_API external
 
 ```
@@ -78,11 +74,10 @@ graph TB
 ### 2.2 主要コンポーネントと責務
 
 * NotifierAPIとNotifierDBが本ソフトウェアの対象
-* NotifierAPIは、EKS(Kubernetes)上のPodとして動作する。
-* NotifierDBは、AWSのRDS(PostgreSQL)として動作し、Notifierの通知先リスト、通知情報を保持する
+* NotifierAPIは、コンテナとして動作し、冗長構成をとることができる。
+* NotifierDBは、PostgreSQLとして動作し、Notifierの通知先リスト、通知情報を保持する
 * 認証は、L3 Identity ComponentのKeyCloakの認証機能を使用する。
 * NotifierAPIは、L2 Transactionを介して呼び出される。
-* 認可情報は、Notifier内のJsonファイルとして保持する。
 
 ---
 
@@ -91,7 +86,6 @@ graph TB
 ### 3.1 通知先リスト作成、更新、取得、削除シーケンス
 
 ```mermaid 
-
 ---
 title: 通知先リスト作成、更新、取得、削除
 config:
@@ -165,7 +159,6 @@ end
 ### 3.2 通知登録、更新、取得、削除シーケンス
 
 ```mermaid 
-
 ---
 title: 通知登録、更新、取得、削除
 config:
@@ -215,7 +208,7 @@ opt 通知情報更新
   P_SA-->>P: 
 end
 
-%% --- 通知詳細取取得 ---
+%% --- 通知詳細取得 ---
 opt 通知情報取得
   P->>P_SA: 通知詳細取得要求
   P_SA->>CORE_L2: 通知詳細取得要求
@@ -239,7 +232,6 @@ end
 ### 3.3 通知情報確認、通知確認状態更新シーケンス
 
 ```mermaid 
-
 ---
 title: 通知一覧取得、通知確認状態更新
 config:
@@ -292,7 +284,6 @@ end
 ### 3.4 データ受領、データ受領状態更新シーケンス
 
 ```mermaid 
-
 ---
 title: データ受領、データ受領状態更新シーケンス
 config:
@@ -409,83 +400,22 @@ end
 - L3 Identity Componentとの認証フローは、利用ユーザの場合は、認可コードフローにより認証を行い取得したアクセストークンを利用する。
 - L3 Identity Componentとの認証フローは、ユーザシステムの場合(人を介在しない場合)は、クレデンシャルフローにより認証を行い取得したアクセストークンを利用する。
 - 各APIのAuthorizationヘッダに付与されたアクセストークンを元に、利用ユーザまたは、ユーザシステムを特定し、認可情報をチェック後、該当する通知情報を返却する。
-- 認可情報は、本API内にてJsonファイルとして管理し、API構築時に認可情報を設定、更新する。
+- 認可機能は、通知機能とは別にOpenFGAを構築し、認可登録、認可チェックを行うことを前提とする。
 
-### 5.2 アクセストークン
+### 5.2 認可機能
 
-#### JWT Payload構造 (例)
-```json
-{
-  "sub": "user_123",
-  "name": "John Doe",
-  "roles": ["api_writer"],
-  "groups": ["developers"],
-  "iat": 1609459200,
-  "exp": 1609462800
-}
-```
+- 認可対象
+  - 通知機能の各API
 
-### 5.3 認可モデル設計
+- 認可登録
+  - 事前にユーザ(operator_id)単位で、通知機能のどのAPIに対してアクセス可能とするかを登録する。
+  - 認可登録は、認可機能(OpenFGA)のAPIを実行して登録する。
 
-- 認可権限確認順序:
-
-  1. JWTのrolesとgroupsから有効ロールを算出
-  2. リソース・操作に対するdenyルールをチェック → 該当すれば拒否
-  3. リソース・操作に対するallowルールをチェック → 該当すれば許可
-  4. いずれにも該当しない → 拒否（deny by default）
-
-- 操作粒度: API エンドポイント単位（GET /api/v1/users など）
-
-### 5.4 認可情報管理（JSONファイル構造）
-
-* 認可情報は、Notifier内に、Jsonとして管理する。
-* 認可情報の例を示す。
-
-```json
-{
-  "version": "1.0",
-  "group_role_mapping": {
-    "admin": ["api_admin"],
-    "developers": ["api_writer", "api_reader"],
-    "viewers": ["api_reader"]
-  },
-  "permissions": {
-    "roles": {
-      "api_admin": {
-        "allow": [
-          {
-            "resource": "api/v1/*",
-            "operations": ["GET", "POST", "PUT", "DELETE"]
-          }
-        ]
-      },
-      "api_writer": {
-        "allow": [
-          {
-            "resource": "api/v1/notifications",
-            "operations": ["GET", "POST"]
-          }
-        ]
-      },
-      "api_reader": {
-        "allow": [
-          {
-            "resource": "api/v1/notifications",
-            "operations": ["GET"]
-          }
-        ]
-      }
-    }
-  },
-  "deny_rules": [
-    {
-      "resource": "api/v1/admin/*",
-      "roles": ["api_reader", "api_writer"],
-      "operations": ["*"]
-    }
-  ]
-}
-```
+- 認可確認
+  - 通知機能の各API内で、アクセストークンを確認し、operator_idを取得
+  - 通知機能の各APIから認可機能に該当operator_idが対象の通知機能のAPIに対して認可登録がされているかを問い合わせる。
+  - 認可されている場合は、APIを実行。
+  - 認可されていない場合は、403エラーを返す。
 
 ## 6. データ設計
 
@@ -521,13 +451,13 @@ end
 * 更新日時 `updated_at`（必須）
 * 業務規約（論理）：`target_ids` または 中間テーブル経由の通知先リスト の少なくとも一方は指定
 
-### 6.1.3.1 通知-通知先リスト中間テーブル `notification_target_list_map`
+### 6.1.4 通知-通知先リスト中間テーブル `notification_target_list_map`
 
 * 通知ID `notification_id`（必須・FK → notification）
 * 通知先リストID `target_list_id`（必須・FK → notification_target_list）
 * 主キー方針（論理）：(`notification_id`, `target_list_id`) 複合一意
 
-### 6.1.4 通知種別 `notification_type`
+### 6.1.5 通知種別 `notification_type`
 
 * 通知種別ID `type_id`（必須・一意・UUID）
 * 通知種別コード `type_code`（必須・一意・varchar(100)）
@@ -535,7 +465,7 @@ end
 * 登録日時 `created_at`（必須）
 * 更新日時 `updated_at`（必須）
 
-### 6.1.5 通知情報確認済み状態 `notification_confirmed`
+### 6.1.6 通知情報確認済み状態 `notification_confirmed`
 
 * 通知ID `notification_id`（必須・FK → notification）
 * 通知受信者ID `target_id`（必須・varchar(255)）
@@ -544,7 +474,7 @@ end
 * 更新日時 `updated_at`（必須）
 * 主キー方針（論理）：(`notification_id`, `target_id`) 複合一意
 
-### 6.1.6 データ受領状態 `notification_data_confirmed`
+### 6.1.7 データ受領状態 `notification_data_confirmed`
 
 * 通知ID `notification_id`（必須・FK → notification）
 * 通知受信者ID `target_id`（必須・varchar(255)）
@@ -628,6 +558,7 @@ erDiagram
 
 | 版   | 日付         | 変更点                                                                                                       |
 | --- | ---------- | --------------------------------------------------------------------------------------------------------- |
-| 0.1 | 2025-08-29 | 初版 |
+| 1.0 | 2026-02-28 | 第1.0版 |
+| 1.1 | 2026-08-31 | 第1.1版 |
 
 ---

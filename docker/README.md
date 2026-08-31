@@ -195,6 +195,56 @@ docker compose up --build
 
 ---
 
+## ODS スタック統合
+
+ODS スタックの他サービス（OpenFGA 等）と連携して動かす場合の手順です。
+
+### 共有ネットワークへの参加
+
+`docker-compose.yml` の default ネットワークは共有ネットワーク（デフォルト名: `shared-network`）に接続されます。
+同一ネットワークに参加している他サービスとは、コンテナ名で相互通信できます（例: `http://openfga:8080`）。
+
+ネットワーク名は `SHARED_NETWORK_NAME` で変更できます。スタック側が `shared-network-ods` を使用している場合:
+
+```bash
+SHARED_NETWORK_NAME=shared-network-ods docker compose up --build -d
+```
+
+スタック側で作成済みのネットワークに参加する際、ラベル不一致で compose がエラーになる場合は、
+`docker/docker-compose.override.yml` を作成して external 指定してください:
+
+```yaml
+networks:
+  default:
+    name: shared-network-ods
+    external: true
+```
+
+### ポート競合
+
+| ホストポート | 使用サービス | 備考 |
+|---|---|---|
+| 8080 | notifier (app) | OpenFGA の HTTP デフォルト (8080) と競合し得る |
+| 8081 / 3000 | OpenFGA (gRPC / Playground) | OpenFGA をホスト公開している場合 |
+
+notifier のホストポートは `NOTIFIER_PORT` で変更できます:
+
+```bash
+NOTIFIER_PORT=18080 docker compose up -d
+# → http://localhost:18080/health
+```
+
+`notifier-db` はホストにポート公開していない（コンテナ間通信のみ）ため、ホストや他サービスの
+PostgreSQL (5432) とは競合しません。デバッグ等でホスト公開する場合は `"15432:5432"` のように
+5432 以外を割り当ててください。
+
+### PostgreSQL 18 (PG18) の注意点
+
+- `postgres:18` イメージは PGDATA が `/var/lib/postgresql/18/docker` に変更されたため、ボリュームは `/var/lib/postgresql` にマウントしてください（`/var/lib/postgresql/data` ではデータが永続化されません。本 compose は対応済み）。
+- PostgreSQL 17 以前で作成した既存ボリュームでは起動できません（`database files are incompatible with server`）。`docker compose down -v` で再作成してください。
+
+---
+
 ## 外部サービスとの連携
 
 ### OpenFGA 認可サービス

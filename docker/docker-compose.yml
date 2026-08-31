@@ -8,7 +8,9 @@ services:
       #ports:
       #- "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # postgres:18 から PGDATA が /var/lib/postgresql/18/docker に変更されたため
+      # /var/lib/postgresql/data ではなく /var/lib/postgresql をマウントする
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -20,7 +22,7 @@ services:
       context: ../                    # プロジェクトルート
       dockerfile: docker/Dockerfile   # context からの相対パス
     ports:
-      - "8080:8000"
+      - "${NOTIFIER_PORT:-8080}:8000"
     environment:
       # ===========================================
       # 開発環境設定
@@ -102,7 +104,7 @@ services:
 
 networks:
   default:
-    name: shared-network
+    name: ${SHARED_NETWORK_NAME:-shared-network}
 
 volumes:
   postgres_data:
