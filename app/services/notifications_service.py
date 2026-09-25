@@ -162,7 +162,8 @@ class NotificationService(BaseService):
         target_ids: Optional[List[str]] = None,
         target_list_ids: Optional[List[str]] = None,  # ✅ 複数形に変更
         data_id: Optional[str] = None,
-        initialize_confirmation: bool = True
+        initialize_confirmation: bool = True,
+        commit: bool = True
     ) -> Notification:
         """
         通知を作成（確認状態も自動初期化）
@@ -176,6 +177,7 @@ class NotificationService(BaseService):
             target_list_ids: 通知先リストIDのリスト（複数指定可）
             data_id: データID
             initialize_confirmation: 確認状態を初期化するか
+            commit: Falseの場合はcommitしない
         
         Returns:
             作成された通知
@@ -299,7 +301,8 @@ class NotificationService(BaseService):
                     )
             
             # トランザクションコミット
-            self.commit()
+            if commit:
+                self.commit()
             
             logger.info(
                 "Notification created successfully with confirmations",
@@ -418,7 +421,8 @@ class NotificationService(BaseService):
         expected_updated_at: datetime,
         title: Optional[str] = None,
         content: Optional[str] = None,
-        status: Optional[NotificationStatus] = None
+        status: Optional[NotificationStatus] = None,
+        commit: bool = True
     ) -> Optional[Notification]:
         """
         通知を更新
@@ -429,6 +433,7 @@ class NotificationService(BaseService):
             title: 新しいタイトル
             content: 新しい内容
             status: 新しいステータス
+            commit: Falseの場合はcommitしない
         
         Returns:
             更新された通知
@@ -464,7 +469,8 @@ class NotificationService(BaseService):
                     current.updated_at.isoformat()
                 )
             
-            self.commit()
+            if commit:
+                self.commit()
             logger.info(
                 "Notification updated successfully",
                 extra={'notification_id': notification_id}
@@ -483,12 +489,13 @@ class NotificationService(BaseService):
             raise
     
     @log_execution_time(logger, 'info')
-    def delete_notification(self, notification_id: str) -> bool:
+    def delete_notification(self, notification_id: str, commit: bool = True) -> bool:
         """
         通知を削除（論理削除）
         
         Args:
             notification_id: 通知ID
+            commit: Falseの場合はcommitしない
         
         Returns:
             削除成功時True
@@ -504,7 +511,8 @@ class NotificationService(BaseService):
             if not result:
                 raise RecordNotFoundError("Notification", notification_id)
             
-            self.commit()
+            if commit:
+                self.commit()
             logger.info(
                 "Notification deleted successfully",
                 extra={'notification_id': notification_id}
@@ -517,6 +525,79 @@ class NotificationService(BaseService):
         except Exception as e:
             self.rollback()
             logger.error("Failed to delete notification", exc_info=True)
+            raise
+
+    @log_execution_time(logger, 'info')
+    def bulk_create_notifications(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        複数の通知を一括登録
+
+        Args:
+            items: create_notification の引数（commit 以外）の辞書リスト
+
+        Returns:
+            登録結果のリスト（リクエストと同じ順序）
+        """
+        try:
+            results = []
+            for index, item in enumerate(items):
+                try:
+                    results.append(self.create_notification(**item, commit=False))
+                except ValueError as e:
+                    raise ValueError(f"notifications[{index}]: {e}") from e
+            self.commit()
+            logger.info("Notifications bulk created", extra={'count': len(results)})
+            return results
+        except Exception:
+            self.rollback()
+            raise
+
+    @log_execution_time(logger, 'info')
+    def bulk_update_notifications(self, items: List[Dict[str, Any]]) -> List[Notification]:
+        """
+        複数の通知を一括更新
+
+        Args:
+            items: update_notification の引数（commit 以外）の辞書リスト
+
+        Returns:
+            更新後の通知リスト（リクエストと同じ順序）
+        """
+        try:
+            results = [None] * len(items)
+            # notification_id の順に更新する（結果はリクエストの順序で返す）
+            for index in sorted(range(len(items)), key=lambda i: items[i]['notification_id']):
+                try:
+                    results[index] = self.update_notification(**items[index], commit=False)
+                except ValueError as e:
+                    raise ValueError(f"notifications[{index}]: {e}") from e
+            self.commit()
+            logger.info("Notifications bulk updated", extra={'count': len(results)})
+            return results
+        except Exception:
+            self.rollback()
+            raise
+
+    @log_execution_time(logger, 'info')
+    def bulk_delete_notifications(self, notification_ids: List[str]) -> int:
+        """
+        複数の通知を一括削除（論理削除）
+
+        Args:
+            notification_ids: 通知IDのリスト
+
+        Returns:
+            削除件数
+        """
+        try:
+            # notification_id の順に削除する
+            for notification_id in sorted(notification_ids):
+                self.delete_notification(notification_id, commit=False)
+            self.commit()
+            logger.info("Notifications bulk deleted", extra={'count': len(notification_ids)})
+            return len(notification_ids)
+        except Exception:
+            self.rollback()
             raise
 
     @log_execution_time(logger, 'info')
