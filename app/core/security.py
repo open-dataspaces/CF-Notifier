@@ -91,7 +91,7 @@ async def verify_request_headers(
     x_tracking_id: str = Header(..., min_length=1, alias="X-TrackingId"),
     accept_language: str = Header(..., min_length=1, alias="Accept-Language"),
     content_type: Literal["application/json"] = Header(..., alias="Content-Type"),
-    x_notification_api_key: str = Header(..., alias="x-notifier-api-key")
+    x_notification_api_key: str = Header(..., alias="X-Notifier-API-Key", title="X-Notifier-API-Key")
 ):
     
     # X-TrackingId を厳密にバリデーション

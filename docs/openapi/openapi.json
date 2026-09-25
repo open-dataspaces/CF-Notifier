@@ -61,12 +61,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -493,12 +493,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -937,12 +937,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -1440,12 +1440,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -1902,12 +1902,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -2339,12 +2339,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -2789,12 +2789,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -3233,12 +3233,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -3736,12 +3736,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -4198,12 +4198,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -4645,12 +4645,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
@@ -5109,12 +5109,12 @@
             }
           },
           {
-            "name": "x-notifier-api-key",
+            "name": "X-Notifier-API-Key",
             "in": "header",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "X-Notifier-Api-Key"
+              "title": "X-Notifier-API-Key"
             }
           }
         ],
