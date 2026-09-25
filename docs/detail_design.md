@@ -54,23 +54,24 @@ alt 通知先リスト作成
   FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB1: 通知先リスト登録(INSERT)
   DIST_DB1-->>DIST: 作成結果
-  DIST-->>CORE_L2: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
-  CORE_L2-->>P_SA: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  DIST-->>CORE_L2: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
+  CORE_L2-->>P_SA: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
 end
 
 %% --- Update: 通知先リストの更新 ---
 alt 通知先リスト更新
   P->>P_SA: 通知先リスト更新
-  P_SA->>CORE_L2: PUT /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
-  CORE_L2->>DIST: PUT /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  P_SA->>CORE_L2: PUT /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
+  CORE_L2->>DIST: PUT /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB1: 通知先リスト情報を更新(UPDATE)
+  DIST->>DIST_DB1: 通知先リスト情報を更新(UPDATE ※更新日時が一致する場合のみ)
   DIST_DB1-->>DIST: 更新結果
-  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
-  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  Note over DIST: 更新件数0件（更新日時の不一致）の場合は 409 Conflict
+  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
+  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
 end
 
 %% --- Retrieve: 通知先リストの取得 ---
@@ -84,8 +85,8 @@ alt 通知先リスト取得
   FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB1: 指定したIDの通知先リストを取得(SELECT)
   DIST_DB1-->>DIST: 指定した通知先リスト情報
-  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
-  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
+  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
 end
 
 %% --- Delete: 通知先リストの削除 ---
@@ -114,8 +115,8 @@ alt 通知先リスト一覧取得
   FGA-->>DIST: 認可結果 (allowed)
   DIST->>DIST_DB1: 通知先リストを取得(SELECT)
   DIST_DB1-->>DIST: 通知先リスト一覧
-  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
-  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
+  DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
+  CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
 end
 
 ```
@@ -178,14 +179,15 @@ end
 %% --- Update: 通知情報の更新 ---
 alt 通知情報更新
   P->>P_SA: 通知情報更新
-  P_SA->>CORE_L2: PUT /api/v1/notifications/{通知ID}<BR>(通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID)
-  CORE_L2->>DIST: PUT /api/v1/notifications/{通知ID}<BR>(通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID)
+  P_SA->>CORE_L2: PUT /api/v1/notifications/{通知ID}<BR>(通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,更新日時)
+  CORE_L2->>DIST: PUT /api/v1/notifications/{通知ID}<BR>(通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,更新日時)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB2: 指定した通知情報更新(UPDATE)
+  DIST->>DIST_DB2: 指定した通知情報更新(UPDATE ※更新日時が一致する場合のみ)
   DIST_DB2-->>DIST: 更新結果
+  Note over DIST: 更新件数0件（更新日時の不一致）の場合は 409 Conflict
   DIST-->>CORE_L2: 200 OK<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
   CORE_L2-->>P_SA: 200 OK<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
 end
@@ -624,49 +626,60 @@ CREATE INDEX IF NOT EXISTS idx_data_confirmed_updated ON notification_data_confi
 
 #### 基本方針
 `updated_at`フィールドを楽観的排他制御のバージョン識別子として使用し、データの競合状態を検知・防止する。
+更新API（PUT）のリクエストボディには、取得時の`updated_at`を必須項目として指定する。
 
 #### 管理対象テーブル
-| テーブル | updated_at列仕様 | デフォルト値 | 備考 |
-|----------|-----------------|-------------|------|
-| notification | timestamptz NOT NULL DEFAULT now() | now() | 通知データ |
+| テーブル | updated_at列仕様 | デフォルト値 | 対象API | 備考 |
+|----------|-----------------|-------------|---------|------|
+| notification | timestamptz NOT NULL DEFAULT now() | now() | PUT /api/v1/notifications/{notification_id} | 通知データ |
+| notification_target_list | timestamptz NOT NULL DEFAULT now() | now() | PUT /api/v1/notification-targets/{target_list_id} | 通知先リスト。通知受信者（target_ids）の洗い替えも同じ排他制御の範囲で行う |
+
+> 削除API、通知確認状態更新API、データ受領状態更新APIは排他制御の対象外とする。
 
 #### 更新処理フロー
 
 #### (1). データ読み取り段階
-- 対象データと`updated_at`を同時に取得
-- API側で`updated_at`の値を保持
+- 取得APIのレスポンスで対象データと`updated_at`を同時に取得
+- API呼び出し元で`updated_at`の値を保持
 - この段階ではロックは発生しない
 
 ```sql
 SELECT notification_id, title, content, updated_at 
 FROM notification 
 WHERE notification_id = ?;
+
+SELECT target_list_id, name, owner_id, updated_at 
+FROM notification_target_list 
+WHERE target_list_id = ?;
 ```
 
 #### (2). 更新処理段階
+- 更新APIのリクエストボディに、保持していた`updated_at`を取得した値のまま指定（マイクロ秒まで比較する）
 - 更新実行時に以下の条件で実行
 ```sql
 UPDATE notification 
-SET title = ?, content = ?, updated_at = now() 
-WHERE notification_id = ? AND updated_at = ?;
+SET title = ?, content = ?, status = ?, updated_at = now() 
+WHERE notification_id = ? AND status <> 'deleted' AND updated_at = ?;
+
+UPDATE notification_target_list 
+SET name = ?, owner_id = ?, updated_at = now() 
+WHERE target_list_id = ? AND updated_at = ?;
+-- 更新件数が1件の場合のみ、続けて target_ids を洗い替える（DELETE → INSERT）
 ```
 - WHERE条件で元の`updated_at`をチェック
-- 更新件数が0件の場合は競合発生と判定
+- 更新件数が0件の場合、対象データが存在しなければ404（該当データなし）、存在すれば競合発生と判定
 
 #### (3). 競合処理段階
 - 競合検出時はHTTPステータス409（Conflict）で応答
-- エラーレスポンスで最新データの再取得を促す
+- エラーレスポンスの detail に、送信された`updated_at`（Expected）と現在の`updated_at`（Actual）を含め、最新データの再取得を促す
 - エラーレスポンス例
 ```json
 {
-  "type": "https://api.example.com/problems/optimistic-lock-conflict",
-  "title": "Data Conflict", 
+  "type": "conflict",
+  "title": "Conflict",
+  "detail": "Version mismatch for Notification(550e8400-e29b-41d4-a716-446655440000). Expected: 2024-01-15T10:30:15.123000, Actual: 2024-01-15T10:35:22.456000",
   "status": 409,
-  "detail": "The data you are trying to update has been modified by another user",
-  "instance": "/api/v1/notifications/550e8400-e29b-41d4",
-  "current_updated_at": "2024-01-15T10:35:22.456Z",
-  "submitted_updated_at": "2024-01-15T10:30:15.123Z", 
-  "retry_recommended": true
+  "instance": "/api/v1/notifications/550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
@@ -807,6 +820,7 @@ logger.info(
 | --- | ---------- | --------------------------------------------------------------------------------------------------------- |
 | 1.0 | 2026-02-28 | 第1.0版 |
 | 1.1 | 2026-08-31 | 第1.1版 |
+| 1.2 | 2026-09-30 | 第1.2版 |
 
 ---
 

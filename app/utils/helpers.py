@@ -1,4 +1,5 @@
 """Helper Functions"""
+from datetime import datetime, timezone
 from typing import Any, Dict
 import re
 
@@ -17,3 +18,10 @@ def camel_to_snake(camel_str: str) -> str:
 def remove_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
     """Remove None values from dictionary"""
     return {k: v for k, v in data.items() if v is not None}
+
+
+def to_naive_utc(dt: datetime) -> datetime:
+    """Convert datetime to naive UTC datetime"""
+    if dt.tzinfo is None:
+        return dt
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)

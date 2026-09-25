@@ -17,7 +17,7 @@ from sqlalchemy.exc import (
     SQLAlchemyError,
     NoResultFound
 )
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, update as sa_update
 
 # ログ設定のインポート
 from app.core.logging import get_logger, log_execution_time
@@ -383,7 +383,12 @@ class NotificationRepository(BaseRepository):
             raise
 
     @log_execution_time(logger, 'debug')
-    def get_by_id(self, notification_id: uuid.UUID, include_relations: bool = False) -> Optional[Notification]:
+    def get_by_id(
+        self,
+        notification_id: uuid.UUID,
+        include_relations: bool = False,
+        include_deleted: bool = False
+    ) -> Optional[Notification]:
         try:
             query = self.db.query(Notification)
             if include_relations:
@@ -393,10 +398,10 @@ class NotificationRepository(BaseRepository):
                     joinedload(Notification.confirmations),
                     joinedload(Notification.data_confirmations)
                 )
-            return query.filter(
-                Notification.notification_id == notification_id,
-                Notification.status != NotificationStatus.DELETED.value
-            ).first()
+            query = query.filter(Notification.notification_id == notification_id)
+            if not include_deleted:
+                query = query.filter(Notification.status != NotificationStatus.DELETED.value)
+            return query.first()
         except SQLAlchemyError as e:
             self._log_error(e, 'get_notification')
             raise
@@ -487,6 +492,7 @@ class NotificationRepository(BaseRepository):
     def update(
         self,
         notification_id: str,
+        expected_updated_at: datetime,
         title: Optional[str] = None,
         content: Optional[str] = None,
         status: Optional[NotificationStatus] = None
@@ -496,12 +502,13 @@ class NotificationRepository(BaseRepository):
         
         Args:
             notification_id: 通知ID
+            expected_updated_at: クライアントが取得時に保持していた更新日時
             title: 新しいタイトル
             content: 新しい内容
             status: 新しいステータス
         
         Returns:
-            更新された通知(存在しない場合はNone)
+            更新された通知(存在しない、または更新日時が一致しない場合はNone)
         """
         try:
             logger.info(
@@ -509,26 +516,35 @@ class NotificationRepository(BaseRepository):
                 extra={'notification_id': notification_id}
             )
             
-            notification = self.get_by_id(notification_id, include_relations=True)
-            
-            if not notification:
+            values = {'updated_at': datetime.utcnow()}
+            if title is not None:
+                values['title'] = title
+            if content is not None:
+                values['content'] = content
+            if status is not None:
+                values['status'] = status
+
+            result = self.db.execute(
+                sa_update(Notification)
+                .where(
+                    Notification.notification_id == notification_id,
+                    Notification.status != NotificationStatus.DELETED.value,
+                    Notification.updated_at == expected_updated_at
+                )
+                .values(**values)
+                .execution_options(synchronize_session='fetch')
+            )
+
+            if result.rowcount == 0:
                 logger.warning(
-                    "Cannot update: notification not found",
+                    "Cannot update: notification not found or updated_at mismatch",
                     extra={'notification_id': notification_id}
                 )
                 return None
             
-            if title is not None:
-                notification.title = title
-            if content is not None:
-                notification.content = content
-            if status is not None:
-                notification.status = status
-            
-            notification.updated_at = datetime.utcnow()
-            
-            self.db.flush()
-            
+            # status を deleted に更新した場合も更新後の通知を返す
+            notification = self.get_by_id(notification_id, include_relations=True, include_deleted=True)
+
             logger.info(
                 "Notification updated (not committed)",
                 extra={'notification_id': notification_id}

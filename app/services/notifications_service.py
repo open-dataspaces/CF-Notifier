@@ -16,7 +16,8 @@ import uuid
 
 # ログ設定のインポート
 from app.core.logging import get_logger, log_execution_time
-from app.core.custom_exceptions import RecordNotFoundError
+from app.core.custom_exceptions import RecordNotFoundError, OptimisticLockError
+from app.utils.helpers import to_naive_utc
 logger = get_logger(__name__)
 
 
@@ -414,6 +415,7 @@ class NotificationService(BaseService):
     def update_notification(
         self,
         notification_id: str,
+        expected_updated_at: datetime,
         title: Optional[str] = None,
         content: Optional[str] = None,
         status: Optional[NotificationStatus] = None
@@ -423,6 +425,7 @@ class NotificationService(BaseService):
         
         Args:
             notification_id: 通知ID
+            expected_updated_at: クライアントが取得時に保持していた更新日時
             title: 新しいタイトル
             content: 新しい内容
             status: 新しいステータス
@@ -442,15 +445,24 @@ class NotificationService(BaseService):
                 extra={'notification_id': notification_id}
             )
             
+            expected_updated_at = to_naive_utc(expected_updated_at)
             notification = self.notification_repo.update(
                 notification_id,
+                expected_updated_at,
                 title,
                 content,
                 status
             )
             
             if notification is None:
-                raise RecordNotFoundError("Notification", notification_id)
+                current = self.notification_repo.get_by_id(notification_id)
+                if current is None:
+                    raise RecordNotFoundError("Notification", notification_id)
+                raise OptimisticLockError(
+                    f"Notification({notification_id})",
+                    expected_updated_at.isoformat(),
+                    current.updated_at.isoformat()
+                )
             
             self.commit()
             logger.info(
@@ -463,7 +475,7 @@ class NotificationService(BaseService):
         except ValueError as e:
             logger.warning(f"Validation error: {e}")
             raise
-        except RecordNotFoundError:
+        except (RecordNotFoundError, OptimisticLockError):
             raise
         except Exception as e:
             self.rollback()

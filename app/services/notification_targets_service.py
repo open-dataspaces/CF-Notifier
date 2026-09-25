@@ -16,7 +16,8 @@ import uuid
 
 # ログ設定のインポート
 from app.core.logging import get_logger, log_execution_time
-from app.core.custom_exceptions import RecordNotFoundError
+from app.core.custom_exceptions import RecordNotFoundError, OptimisticLockError
+from app.utils.helpers import to_naive_utc
 logger = get_logger(__name__)
 
 # スキーマのインポート
@@ -174,6 +175,7 @@ class NotificationTargetListService(BaseService):
                 "target_list_id": str(tl.target_list_id),
                 "name": tl.name,
                 "owner_id": tl.owner_id,
+                "updated_at": tl.updated_at.isoformat(),
                 "target_ids": [m.target_id for m in tl.target_ids] if tl.target_ids else []
             }
             for tl in target_lists
@@ -235,6 +237,7 @@ class NotificationTargetListService(BaseService):
                 "target_list_id": str(tl.target_list_id),
                 "name": tl.name,
                 "owner_id": tl.owner_id,
+                "updated_at": tl.updated_at.isoformat(),
                 "target_ids": [m.target_id for m in tl.target_ids] if tl.target_ids else []
             }
             for tl in target_lists
@@ -244,6 +247,7 @@ class NotificationTargetListService(BaseService):
     def update_target_list(
         self,
         target_list_id: str,
+        expected_updated_at: datetime,
         name: Optional[str] = None,
         owner_id: Optional[str] = None,
         target_ids: Optional[List[str]] = None
@@ -253,6 +257,7 @@ class NotificationTargetListService(BaseService):
 
         Args:
             target_list_id: 通知先リストID
+            expected_updated_at: クライアントが取得時に保持していた更新日時
             name: 新しいリスト名称
             owner_id: 新しい所有者ID
             target_ids: 新しい通知受信者IDリスト
@@ -273,15 +278,24 @@ class NotificationTargetListService(BaseService):
                 extra={'target_list_id': target_list_id}
             )
 
+            expected_updated_at = to_naive_utc(expected_updated_at)
             target_list = self.repository.update(
                 target_list_id,
+                expected_updated_at,
                 name=name,
                 owner_id=owner_id,
                 target_ids=target_ids
             )
 
             if target_list is None:
-                raise RecordNotFoundError("NotificationTargetList", target_list_id)
+                current = self.repository.get_by_id(target_list_id)
+                if current is None:
+                    raise RecordNotFoundError("NotificationTargetList", target_list_id)
+                raise OptimisticLockError(
+                    f"NotificationTargetList({target_list_id})",
+                    expected_updated_at.isoformat(),
+                    current.updated_at.isoformat()
+                )
 
             self.commit()
             logger.info(
@@ -302,7 +316,7 @@ class NotificationTargetListService(BaseService):
         except ValueError as e:
             logger.warning(f"Validation error: {e}")
             raise
-        except RecordNotFoundError:
+        except (RecordNotFoundError, OptimisticLockError):
             raise
         except Exception as e:
             self.rollback()

@@ -371,7 +371,7 @@ async def get_notification(
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
         status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
-        status.HTTP_409_CONFLICT: {"description": "リソース競合エラー", "model": ErrorResponse},
+        status.HTTP_409_CONFLICT: {"description": "リソース競合エラー（updated_at が最新でない場合を含む）", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
 )
@@ -398,6 +398,7 @@ async def update_notification(
         service = get_notification_service(db)
         result = service.update_notification(
             notification_id=notification_id,
+            expected_updated_at=request.updated_at,
             title=request.title,
             content=request.content,
             status=request.status.value if request.status else None
