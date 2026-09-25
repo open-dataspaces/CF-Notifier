@@ -192,6 +192,7 @@ class NotificationUpdate(NotificationBase):
     status: NotifStatus = Field(..., description="ステータス（enabled: 有効, disabled: 無効, deleted: 削除済み）")
     title: str = Field(..., min_length=1, max_length=500, description="通知タイトル")
     content: str = Field(..., min_length=1, description="通知内容")
+    updated_at: datetime = Field(..., description="更新日時（楽観的排他制御用。取得時の updated_at をそのまま指定し、不一致の場合は409）")
 
     model_config = ConfigDict(
         extra="forbid",  # 未定義フィールドを即座に拒否

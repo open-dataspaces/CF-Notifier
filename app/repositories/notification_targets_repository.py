@@ -16,7 +16,7 @@ from sqlalchemy.exc import (
     SQLAlchemyError,
     NoResultFound
 )
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, update as sa_update
 
 # ログ設定のインポート
 from app.core.logging import get_logger, log_execution_time
@@ -360,6 +360,7 @@ class NotificationTargetListRepository(BaseRepository):
     def update(
         self,
         target_list_id: str,
+        expected_updated_at: datetime,
         name: Optional[str] = None,
         owner_id: Optional[str] = None,
         target_ids: Optional[List[str]] = None
@@ -369,12 +370,13 @@ class NotificationTargetListRepository(BaseRepository):
 
         Args:
             target_list_id: 通知先リストID
+            expected_updated_at: クライアントが取得時に保持していた更新日時
             name: 新しいリスト名称
             owner_id: 新しい所有者ID
             target_ids: 新しい通知受信者IDリスト
 
         Returns:
-            更新された通知先リスト(存在しない場合はNone)
+            更新された通知先リスト(存在しない、または更新日時が一致しない場合はNone)
         """
         try:
             logger.info(
@@ -382,20 +384,30 @@ class NotificationTargetListRepository(BaseRepository):
                 extra={'target_list_id': target_list_id}
             )
 
-            target_list = self.get_by_id(target_list_id)
+            values = {'updated_at': datetime.utcnow()}
+            if name is not None:
+                values['name'] = name
+            if owner_id is not None:
+                values['owner_id'] = owner_id
 
-            if not target_list:
+            result = self.db.execute(
+                sa_update(NotificationTargetList)
+                .where(
+                    NotificationTargetList.target_list_id == target_list_id,
+                    NotificationTargetList.updated_at == expected_updated_at
+                )
+                .values(**values)
+                .execution_options(synchronize_session='fetch')
+            )
+
+            if result.rowcount == 0:
                 logger.warning(
-                    "Cannot update: notification target list not found",
+                    "Cannot update: notification target list not found or updated_at mismatch",
                     extra={'target_list_id': target_list_id}
                 )
                 return None
 
-            if name is not None:
-                target_list.name = name
-
-            if owner_id is not None:
-                target_list.owner_id = owner_id
+            target_list = self.get_by_id(target_list_id)
 
             # target_idsの更新（既存を削除して新規作成）
             if target_ids is not None:
@@ -411,8 +423,6 @@ class NotificationTargetListRepository(BaseRepository):
                         target_id=tid
                     )
                     self.db.add(target_member)
-
-            target_list.updated_at = datetime.utcnow()
 
             self.db.flush()
 

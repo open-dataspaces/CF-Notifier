@@ -130,8 +130,8 @@ class OptimisticLockError(ServiceError):
     def __init__(
         self,
         entity: str,
-        expected_version: int,
-        actual_version: int,
+        expected_version: Any,
+        actual_version: Any,
         **kwargs
     ):
         message = (
