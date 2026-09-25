@@ -223,6 +223,89 @@ alt 通知情報削除
 end
 ```
 
+### (2-2) 通知一括登録、一括更新、一括削除シーケンス
+
+```mermaid 
+---
+title: 通知一括登録、一括更新、一括削除
+config:
+  themeVariables:
+    fontSize: 30px
+---
+
+sequenceDiagram
+autonumber
+
+box データ流通システム:　コア機能
+  participant CORE_L2 as データ流通(L2)
+  participant CORE_L3 as 認証・認可(L3)
+  participant FGA as 認可(OpenFGA)
+end
+
+box Notifier
+  participant DIST as Notifier
+  participant DIST_DB2 as NotifierDB(通知)
+end
+
+box データ提供者環境
+  participant P_SA as データ提供アプリ
+  actor P as データ提供者
+end
+
+%% 共通前提：アクセストークン取得
+P->>P_SA: 認証ログイン (認可コードフロー)
+P_SA->>CORE_L3: 認証要求 (認可コードフロー)
+CORE_L3-->>P_SA: IDトークン+アクセストークン
+
+%% --- Create: 通知情報の一括登録 ---
+alt 通知情報一括登録
+  P->>P_SA: 通知情報一括登録
+  P_SA->>CORE_L2: POST /api/v1/notifications/bulk<BR>(アクセストークン,[通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID]のリスト)
+  CORE_L2->>DIST: POST /api/v1/notifications/bulk<BR>(アクセストークン,[通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID]のリスト)
+  DIST->>CORE_L3: アクセストークン検証
+  CORE_L3-->>DIST: OK
+  DIST->>FGA: 認可確認 (Check API: operator_id, 通知登録APIと同じエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>DIST_DB2: 通知情報登録(INSERT)を件数分実行（1トランザクション）
+  DIST_DB2-->>DIST: 登録結果
+  Note over DIST,DIST_DB2: 1件でも失敗した場合は全件ロールバックし、エラーを返す
+  DIST-->>CORE_L2: 201 Created<BR>([通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID]のリスト)
+  CORE_L2-->>P_SA: 201 Created<BR>([通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID]のリスト)
+end
+
+%% --- Update: 通知情報の一括更新 ---
+alt 通知情報一括更新
+  P->>P_SA: 通知情報一括更新
+  P_SA->>CORE_L2: PUT /api/v1/notifications/bulk<BR>(アクセストークン,[通知ID,ステータス,通知タイトル,通知内容,更新日時]のリスト)
+  CORE_L2->>DIST: PUT /api/v1/notifications/bulk<BR>(アクセストークン,[通知ID,ステータス,通知タイトル,通知内容,更新日時]のリスト)
+  DIST->>CORE_L3: アクセストークン検証
+  CORE_L3-->>DIST: OK
+  DIST->>FGA: 認可確認 (Check API: operator_id, 通知更新APIと同じエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>DIST_DB2: 通知情報更新(UPDATE ※更新日時が一致する場合のみ)を通知ID順に件数分実行（1トランザクション）
+  DIST_DB2-->>DIST: 更新結果
+  Note over DIST,DIST_DB2: 1件でも失敗（更新日時の不一致を含む）した場合は全件ロールバックし、エラーを返す
+  DIST-->>CORE_L2: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時]のリスト)
+  CORE_L2-->>P_SA: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時]のリスト)
+end
+
+%% --- Delete: 通知情報の一括削除 ---
+alt 通知情報一括削除
+  P->>P_SA: 通知情報一括削除
+  P_SA->>CORE_L2: POST /api/v1/notifications/bulk-delete<BR>(アクセストークン,通知IDのリスト)
+  CORE_L2->>DIST: POST /api/v1/notifications/bulk-delete<BR>(アクセストークン,通知IDのリスト)
+  DIST->>CORE_L3: アクセストークン検証
+  CORE_L3-->>DIST: OK
+  DIST->>FGA: 認可確認 (Check API: operator_id, 通知削除APIと同じエンドポイント)
+  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>DIST_DB2: 通知情報削除(DELETE)を通知ID順に件数分実行（1トランザクション）
+  DIST_DB2-->>DIST: 削除結果
+  Note over DIST,DIST_DB2: 1件でも失敗した場合は全件ロールバックし、エラーを返す
+  DIST-->>CORE_L2: 204 No Content
+  CORE_L2-->>P_SA: 204 No Content
+end
+```
+
 ### (3) 通知一覧取得シーケンス
 
 ```mermaid 
@@ -631,7 +714,7 @@ CREATE INDEX IF NOT EXISTS idx_data_confirmed_updated ON notification_data_confi
 #### 管理対象テーブル
 | テーブル | updated_at列仕様 | デフォルト値 | 対象API | 備考 |
 |----------|-----------------|-------------|---------|------|
-| notification | timestamptz NOT NULL DEFAULT now() | now() | PUT /api/v1/notifications/{notification_id} | 通知データ |
+| notification | timestamptz NOT NULL DEFAULT now() | now() | PUT /api/v1/notifications/{notification_id}<br>PUT /api/v1/notifications/bulk | 通知データ |
 | notification_target_list | timestamptz NOT NULL DEFAULT now() | now() | PUT /api/v1/notification-targets/{target_list_id} | 通知先リスト。通知受信者（target_ids）の洗い替えも同じ排他制御の範囲で行う |
 
 > 削除API、通知確認状態更新API、データ受領状態更新APIは排他制御の対象外とする。
@@ -672,6 +755,7 @@ WHERE target_list_id = ? AND updated_at = ?;
 #### (3). 競合処理段階
 - 競合検出時はHTTPステータス409（Conflict）で応答
 - エラーレスポンスの detail に、送信された`updated_at`（Expected）と現在の`updated_at`（Actual）を含め、最新データの再取得を促す
+- 一括更新APIでは、1件でも競合した場合は全件をロールバックし、409で応答する
 - エラーレスポンス例
 ```json
 {

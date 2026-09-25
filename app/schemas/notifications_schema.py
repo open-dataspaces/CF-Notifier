@@ -221,6 +221,76 @@ class NotificationUpdate(NotificationBase):
             _validate_uuid_format(tid, f"target_ids[{i}]")
         return v
 
+# ---------------
+# 通知一括処理
+# ---------------
+BULK_MAX_ITEMS = 100
+
+
+def _validate_unique_ids(ids: List[UUID], field_name: str) -> None:
+    """一括処理で同じ通知IDが重複指定されていないかチェックする"""
+    if len(set(ids)) != len(ids):
+        raise ValueError(f"{field_name}: 同じ通知IDが重複して指定されています")
+
+
+class NotificationBulkCreateRequest(BaseSchema):
+    """通知一括登録 リクエスト"""
+    notifications: List[NotificationCreate] = Field(
+        ..., min_length=1, max_length=BULK_MAX_ITEMS,
+        description=f"登録する通知のリスト（1～{BULK_MAX_ITEMS}件）"
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",  # 未定義フィールドを即座に拒否
+    )
+
+
+class NotificationBulkCreateResponse(BaseSchema):
+    """通知一括登録 レスポンス"""
+    notifications: List[NotificationCreateResponse] = Field(..., description="登録した通知のリスト（リクエストと同じ順序）")
+
+
+class NotificationBulkUpdateRequest(BaseSchema):
+    """通知一括更新 リクエスト"""
+    notifications: List[NotificationUpdate] = Field(
+        ..., min_length=1, max_length=BULK_MAX_ITEMS,
+        description=f"更新する通知のリスト（1～{BULK_MAX_ITEMS}件）。各要素の notification_id で更新対象を指定する"
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",  # 未定義フィールドを即座に拒否
+    )
+
+    @field_validator("notifications")
+    @classmethod
+    def validate_unique_notification_ids(cls, v: List[NotificationUpdate]) -> List[NotificationUpdate]:
+        _validate_unique_ids([n.notification_id for n in v], "notifications")
+        return v
+
+
+class NotificationBulkUpdateResponse(BaseSchema):
+    """通知一括更新 レスポンス"""
+    notifications: List[Notification] = Field(..., description="更新後の通知のリスト（リクエストと同じ順序）")
+
+
+class NotificationBulkDeleteRequest(BaseSchema):
+    """通知一括削除 リクエスト"""
+    notification_ids: List[UUID] = Field(
+        ..., min_length=1, max_length=BULK_MAX_ITEMS,
+        description=f"削除する通知IDのリスト（1～{BULK_MAX_ITEMS}件）"
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",  # 未定義フィールドを即座に拒否
+    )
+
+    @field_validator("notification_ids")
+    @classmethod
+    def validate_unique_notification_ids(cls, v: List[UUID]) -> List[UUID]:
+        _validate_unique_ids(v, "notification_ids")
+        return v
+
+
 class NotifUpdateSuccessResponse(BaseSchema):
     # status: NotificationStatus = Field(..., description="通知確認状態")
     updated_at: datetime = Field(..., description="更新日時")

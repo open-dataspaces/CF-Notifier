@@ -22,6 +22,11 @@ from app.schemas.notifications_schema import (
     NotificationCreateResponse,
     Notification,
     NotificationUpdate,
+    NotificationBulkCreateRequest,
+    NotificationBulkCreateResponse,
+    NotificationBulkUpdateRequest,
+    NotificationBulkUpdateResponse,
+    NotificationBulkDeleteRequest,
     SelfNotificationListResponse,
     DataUpdateSuccessResponse,
     NotifUpdateSuccessResponse,
@@ -120,6 +125,333 @@ async def create_notification(
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+    except DatabaseError as e:
+        logger.error(
+            "Request failed - database error",
+            error=str(e),
+            status_code=500,
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error occurred"
+        )
+    except ValueError as e:
+        logger.warning(
+            "Request failed - validation error",
+            error=str(e),
+            status_code=400
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(
+            "Request failed - unexpected error",
+            error_type=type(e).__name__,
+            error=str(e),
+            status_code=500,
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+
+# ========================================
+# 通知一括処理エンドポイント
+# ========================================
+
+@router.post(
+    "/notifications/bulk",
+    response_model=NotificationBulkCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="通知一括登録API",
+    description="複数の通知を一括で登録します。1件でも失敗した場合は全件を登録しません。",
+    responses={
+        status.HTTP_201_CREATED: {"description": "成功"},
+        status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
+        status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
+        status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_409_CONFLICT: {"description": "リソース競合エラー", "model": ErrorResponse},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
+    },
+)
+async def bulk_create_notifications(
+    request: NotificationBulkCreateRequest,
+    headers: dict = Depends(verify_request_headers),
+    credential: dict = Depends(verify_access_token),
+    _: None = Depends(require_permission("notifications:post")),
+    db: Session = Depends(get_db),
+) -> NotificationBulkCreateResponse:
+    """
+    通知を一括登録
+
+    - **notifications**: 登録する通知のリスト（各要素は通知登録APIのリクエストと同じ形式）
+    """
+    request_id = headers.get('x_tracking_id') or str(uuid4())
+    set_request_id(request_id)
+
+    logger.info(
+        "Received bulk create notifications request",
+        endpoint="/api/v1/notifications/bulk",
+        method="POST",
+        count=len(request.notifications)
+    )
+
+    try:
+        service = get_notification_service(db)
+        results = service.bulk_create_notifications([
+            {
+                "type_code": n.type_code,
+                "type_name": n.type_name,
+                "title": n.title,
+                "content": n.content,
+                "target_ids": n.target_ids,
+                "target_list_ids": n.target_list_ids,
+                "data_id": n.data_id,
+                "initialize_confirmation": True,
+            }
+            for n in request.notifications
+        ])
+
+        logger.info(
+            "Notifications bulk created successfully",
+            count=len(results),
+            status_code=201
+        )
+
+        return NotificationBulkCreateResponse(notifications=results)
+
+    except RecordNotFoundError as e:
+        logger.warning(
+            "Request failed - resource not found",
+            error=str(e),
+            status_code=404
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except (DuplicateRecordError, ResourceConflictError) as e:
+        logger.warning(
+            "Request failed - resource conflict",
+            error=str(e),
+            status_code=409
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+    except DatabaseError as e:
+        logger.error(
+            "Request failed - database error",
+            error=str(e),
+            status_code=500,
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error occurred"
+        )
+    except ValueError as e:
+        logger.warning(
+            "Request failed - validation error",
+            error=str(e),
+            status_code=400
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(
+            "Request failed - unexpected error",
+            error_type=type(e).__name__,
+            error=str(e),
+            status_code=500,
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+
+@router.put(
+    "/notifications/bulk",
+    response_model=NotificationBulkUpdateResponse,
+    summary="通知一括更新API",
+    description="複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。",
+    responses={
+        status.HTTP_200_OK: {"description": "成功"},
+        status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
+        status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
+        status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_409_CONFLICT: {"description": "リソース競合エラー（updated_at が最新でない場合を含む）", "model": ErrorResponse},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
+    },
+)
+async def bulk_update_notifications(
+    request: NotificationBulkUpdateRequest,
+    headers: dict = Depends(verify_request_headers),
+    credential: dict = Depends(verify_access_token),
+    _: None = Depends(require_permission("notifications:put")),
+    db: Session = Depends(get_db),
+) -> NotificationBulkUpdateResponse:
+    """
+    通知を一括更新
+
+    - **notifications**: 更新する通知のリスト（各要素は通知更新APIのリクエストと同じ形式。notification_id で対象を指定）
+    """
+    request_id = headers.get('x_tracking_id') or str(uuid4())
+    set_request_id(request_id)
+
+    logger.info(
+        "Received bulk update notifications request",
+        endpoint="/api/v1/notifications/bulk",
+        method="PUT",
+        count=len(request.notifications)
+    )
+
+    try:
+        service = get_notification_service(db)
+        results = service.bulk_update_notifications([
+            {
+                "notification_id": n.notification_id,
+                "expected_updated_at": n.updated_at,
+                "title": n.title,
+                "content": n.content,
+                "status": n.status.value if n.status else None,
+            }
+            for n in request.notifications
+        ])
+
+        logger.info(
+            "Notifications bulk updated successfully",
+            count=len(results),
+            status_code=200
+        )
+
+        return NotificationBulkUpdateResponse(notifications=results)
+
+    except RecordNotFoundError as e:
+        logger.warning(
+            "Request failed - resource not found",
+            error=str(e),
+            status_code=404
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except (OptimisticLockError, ResourceConflictError) as e:
+        logger.warning(
+            "Request failed - resource conflict",
+            error=str(e),
+            status_code=409
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+    except DatabaseError as e:
+        logger.error(
+            "Request failed - database error",
+            error=str(e),
+            status_code=500,
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error occurred"
+        )
+    except ValueError as e:
+        logger.warning(
+            "Request failed - validation error",
+            error=str(e),
+            status_code=400
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(
+            "Request failed - unexpected error",
+            error_type=type(e).__name__,
+            error=str(e),
+            status_code=500,
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+
+@router.post(
+    "/notifications/bulk-delete",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="通知一括削除API",
+    description="複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。",
+    responses={
+        status.HTTP_204_NO_CONTENT: {"description": "成功"},
+        status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
+        status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
+        status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
+    },
+)
+async def bulk_delete_notifications(
+    request: NotificationBulkDeleteRequest,
+    headers: dict = Depends(verify_request_headers),
+    credential: dict = Depends(verify_access_token),
+    _: None = Depends(require_permission("notifications:delete")),
+    db: Session = Depends(get_db),
+):
+    """
+    通知を一括削除
+
+    - **notification_ids**: 削除する通知IDのリスト
+    """
+    request_id = headers.get('x_tracking_id') or str(uuid4())
+    set_request_id(request_id)
+
+    logger.info(
+        "Received bulk delete notifications request",
+        endpoint="/api/v1/notifications/bulk-delete",
+        method="POST",
+        count=len(request.notification_ids)
+    )
+
+    try:
+        service = get_notification_service(db)
+        service.bulk_delete_notifications(request.notification_ids)
+
+        logger.info(
+            "Notifications bulk deleted successfully",
+            count=len(request.notification_ids),
+            status_code=204
+        )
+
+        return None
+
+    except RecordNotFoundError as e:
+        logger.warning(
+            "Request failed - resource not found",
+            error=str(e),
+            status_code=404
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
     except DatabaseError as e:

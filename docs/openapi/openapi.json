@@ -3168,6 +3168,1312 @@
         }
       }
     },
+    "/api/v1/notifications/bulk": {
+      "post": {
+        "tags": [
+          "通知"
+        ],
+        "summary": "通知一括登録API",
+        "description": "複数の通知を一括で登録します。1件でも失敗した場合は全件を登録しません。",
+        "operationId": "bulk_create_notifications_api_v1_notifications_bulk_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "User-Agent",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "User-Agent"
+            }
+          },
+          {
+            "name": "X-TrackingId",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "X-Trackingid"
+            }
+          },
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Accept-Language"
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "const": "application/json",
+              "type": "string",
+              "title": "Content-Type"
+            }
+          },
+          {
+            "name": "X-Notifier-API-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Notifier-API-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationBulkCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationBulkCreateResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "パラメータエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "該当データなし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "リソース競合エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "通知"
+        ],
+        "summary": "通知一括更新API",
+        "description": "複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。",
+        "operationId": "bulk_update_notifications_api_v1_notifications_bulk_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "User-Agent",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "User-Agent"
+            }
+          },
+          {
+            "name": "X-TrackingId",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "X-Trackingid"
+            }
+          },
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Accept-Language"
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "const": "application/json",
+              "type": "string",
+              "title": "Content-Type"
+            }
+          },
+          {
+            "name": "X-Notifier-API-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Notifier-API-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationBulkUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationBulkUpdateResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "パラメータエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "該当データなし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "リソース競合エラー（updated_at が最新でない場合を含む）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/bulk-delete": {
+      "post": {
+        "tags": [
+          "通知"
+        ],
+        "summary": "通知一括削除API",
+        "description": "複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。",
+        "operationId": "bulk_delete_notifications_api_v1_notifications_bulk_delete_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "User-Agent",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "User-Agent"
+            }
+          },
+          {
+            "name": "X-TrackingId",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "X-Trackingid"
+            }
+          },
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Accept-Language"
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "const": "application/json",
+              "type": "string",
+              "title": "Content-Type"
+            }
+          },
+          {
+            "name": "X-Notifier-API-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Notifier-API-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationBulkDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "成功",
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "パラメータエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "該当データなし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications/{notification_id}": {
       "get": {
         "tags": [
@@ -5767,6 +7073,106 @@
           "updated_at"
         ],
         "title": "Notification"
+      },
+      "NotificationBulkCreateRequest": {
+        "properties": {
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationCreate"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Notifications",
+            "description": "登録する通知のリスト（1～100件）"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "notifications"
+        ],
+        "title": "NotificationBulkCreateRequest",
+        "description": "通知一括登録 リクエスト"
+      },
+      "NotificationBulkCreateResponse": {
+        "properties": {
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationCreateResponse"
+            },
+            "type": "array",
+            "title": "Notifications",
+            "description": "登録した通知のリスト（リクエストと同じ順序）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "notifications"
+        ],
+        "title": "NotificationBulkCreateResponse",
+        "description": "通知一括登録 レスポンス"
+      },
+      "NotificationBulkDeleteRequest": {
+        "properties": {
+          "notification_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Notification Ids",
+            "description": "削除する通知IDのリスト（1～100件）"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "notification_ids"
+        ],
+        "title": "NotificationBulkDeleteRequest",
+        "description": "通知一括削除 リクエスト"
+      },
+      "NotificationBulkUpdateRequest": {
+        "properties": {
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationUpdate"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Notifications",
+            "description": "更新する通知のリスト（1～100件）。各要素の notification_id で更新対象を指定する"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "notifications"
+        ],
+        "title": "NotificationBulkUpdateRequest",
+        "description": "通知一括更新 リクエスト"
+      },
+      "NotificationBulkUpdateResponse": {
+        "properties": {
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            },
+            "type": "array",
+            "title": "Notifications",
+            "description": "更新後の通知のリスト（リクエストと同じ順序）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "notifications"
+        ],
+        "title": "NotificationBulkUpdateResponse",
+        "description": "通知一括更新 レスポンス"
       },
       "NotificationCreate": {
         "properties": {

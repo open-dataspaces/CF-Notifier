@@ -363,6 +363,9 @@ end
 | DELETE    | `/api/v1/notifications/{notification_id}`        | 通知削除            |
 | PUT    | `/api/v1/notifications/{notification_id}/receive`        | 通知確認状態更新            |
 | PUT    | `/api/v1/notifications/{notification_id}/data/{data_id}/receive`        | データ受領状態更新           |
+| POST    | `/api/v1/notifications/bulk`        | 通知一括登録            |
+| PUT    | `/api/v1/notifications/bulk`        | 通知一括更新            |
+| POST    | `/api/v1/notifications/bulk-delete`        | 通知一括削除            |
 
 ### 4.3 エラーレスポンス
 
@@ -389,6 +392,17 @@ end
   "status": 403　# ステータスコード
 }
 ```
+
+### 4.4 一括処理API
+
+* 複数の通知を1リクエストで登録・更新・削除する。
+* 1リクエストあたり1～100件を指定できる。範囲外の場合は 422 を返す。
+* 全件を1トランザクションで処理し、1件でも失敗した場合は全件をロールバックしてエラーを返す。
+  * 入力値エラー（400）の detail には、失敗した要素の位置（例: `notifications[1]`）を含める。
+* 各要素の項目・チェック内容は、対応する単件APIと同じとする。一括更新APIでは、要素ごとに `notification_id` と `updated_at` を指定する。
+* 一括更新・一括削除で同じ通知IDを重複して指定した場合は 422 を返す。
+* レスポンスの並び順はリクエストと同じとする。
+* 認可は対応する単件APIと同じ権限で判定する（一括登録: `notifications:post`、一括更新: `notifications:put`、一括削除: `notifications:delete`）。
 
 ---
 
