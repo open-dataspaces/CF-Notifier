@@ -47,13 +47,15 @@ async def verify_access_token(
 ) -> dict:
     """Bearerトークンを検証"""
     # 開発環境ではトークン検証をスキップ
+    # トークンにUUIDを指定した場合は、それをoperator_idとして扱う
     if settings.IS_DEVELOP:
         logger.debug("Development mode: skipping token verification")
+        operator_id = credentials.credentials if UUID_PATTERN.match(credentials.credentials) else "dev-user"
         return {
             "active": True,
-            "user_id": "dev-user",
-            "sub": "dev-user",
-            "operator_id": "dev-user"
+            "user_id": operator_id,
+            "sub": operator_id,
+            "operator_id": operator_id
         }
 
     try:

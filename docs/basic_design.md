@@ -410,6 +410,7 @@ end
 * 一括更新・一括削除で同じ通知IDを重複して指定した場合は 422 を返す。
 * レスポンスの並び順はリクエストと同じとする。
 * 認可は対応する単件APIと同じ権限で判定する（一括登録: `notifications:post`、一括更新: `notifications:put`、一括削除: `notifications:delete`）。
+* 一括更新・一括削除は、指定したすべての通知の所有者である場合のみ実行できる。所有者でない通知が1件でも含まれる場合は 404 を返し、全件をロールバックする（5.3 参照）。
 
 ---
 
@@ -439,6 +440,24 @@ end
   - 認可されている場合は、APIを実行。
   - 認可されていない場合は、403エラーを返す。
 
+### 5.3 データの分離
+
+- 通知・通知先リストは、登録した提供者（所有者）ごとに分離する。所有者は、アクセストークンの `operator_id` で判定する。
+  - 通知は、登録時のアクセストークンの `operator_id` を所有者とする。
+  - 通知先リストは、リクエストのリスト所有者ID（`owner_id`）がアクセストークンの `operator_id` と一致しない場合は 403 を返す。
+- 通知の受信者は、登録時点で確定する（直接指定した受信者と、指定した通知先リストのメンバー）。
+- APIごとに、実行できる利用者を次のとおりとする。権限のないデータは、存在しないデータと同じ扱い（404）とする。
+
+| API | 所有者 | 受信者 | それ以外 |
+| --- | --- | --- | --- |
+| 通知先リスト取得・更新・削除 | ○ | - | 404 |
+| 通知先リスト一覧取得 | 自分が所有するリストのみ返す | - | - |
+| 通知登録（単件・一括） | ○（指定できる通知先リストは自分が所有するもののみ） | - | - |
+| 通知詳細取得 | ○ | ○（通知確認状態・データ受領状態は自分の分のみ） | 404 |
+| 通知更新・削除（単件・一括） | ○ | 404 | 404 |
+| 通知一覧取得 | - | 自分が受信者である通知のみ返す | - |
+| 通知確認状態更新・データ受領状態更新 | - | ○ | 404 |
+
 ## 6. データ設計
 
 * Notifier内で保持するデータのエンティティ一覧とER図を下記に示す。
@@ -464,6 +483,7 @@ end
 
 * 通知ID `notification_id`（必須・一意・UUID）
 * 通知種別 `type_id`（必須・UUID・FK → notification_type）
+* 所有者ID `owner_id`（新規登録時は必須。登録した提供者の `operator_id`。所有者を補完できなかった既存データのみ NULL）
 * 通知タイトル `title`（必須・varchar(500)）
 * 通知内容 `content`（必須）
 * 通知受信者IDリスト `target_ids`（任意・配列）
@@ -477,6 +497,7 @@ end
 
 * 通知ID `notification_id`（必須・FK → notification）
 * 通知先リストID `target_list_id`（必須・FK → notification_target_list）
+* 所有者ID `owner_id`（新規登録時は必須。通知と通知先リストで同一であることを複合外部キーで保証）
 * 主キー方針（論理）：(`notification_id`, `target_list_id`) 複合一意
 
 ### 6.1.5 通知種別 `notification_type`
@@ -527,6 +548,7 @@ erDiagram
   NOTIFICATION {
     UUID notification_id PK "通知ID"
     UUID type_id FK "通知種別ID"
+    STRING owner_id "所有者ID"
     STRING title "通知タイトル(500文字)"
     TEXT content "通知内容"
     ARRAY target_ids "通知先ユーザID集合"
@@ -539,6 +561,7 @@ erDiagram
   NOTIFICATION_TARGET_LIST_MAP {
     UUID notification_id PK,FK "通知ID"
     UUID target_list_id PK,FK "通知先リストID"
+    STRING owner_id FK "所有者ID"
   }
 
   NOTIFICATION_TYPE {

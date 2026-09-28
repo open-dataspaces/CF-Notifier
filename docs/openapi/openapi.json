@@ -12,7 +12,7 @@
           "通知先リスト"
         ],
         "summary": "通知先リスト作成API",
-        "description": "通知先リストを新規作成します。",
+        "description": "通知先リストを新規作成します。owner_id にはアクセストークンの operator_id を指定します（異なる場合は 403）。",
         "operationId": "create_notification_target_api_v1_notification_targets_post",
         "security": [
           {
@@ -857,7 +857,7 @@
           "通知先リスト"
         ],
         "summary": "通知先リスト取得API",
-        "description": "指定した通知先リストを取得します。",
+        "description": "指定した通知先リストを取得します。リストの所有者のみ取得できます。",
         "operationId": "get_notification_target_api_v1_notification_targets__target_list_id__get",
         "security": [
           {
@@ -1201,7 +1201,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（他の提供者のリストを含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1348,7 +1348,7 @@
           "通知先リスト"
         ],
         "summary": "通知先リスト更新API",
-        "description": "指定した通知先リストを更新します。",
+        "description": "指定した通知先リストを更新します。リストの所有者のみ更新できます。owner_id にはアクセストークンの operator_id を指定します（異なる場合は 403）。",
         "operationId": "update_notification_target_api_v1_notification_targets__target_list_id__put",
         "security": [
           {
@@ -1616,7 +1616,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（他の提供者のリストを含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1810,7 +1810,7 @@
           "通知先リスト"
         ],
         "summary": "通知先リスト削除API",
-        "description": "指定した通知先リストを削除します。",
+        "description": "指定した通知先リストを削除します。リストの所有者のみ削除できます。",
         "operationId": "delete_notification_target_api_v1_notification_targets__target_list_id__delete",
         "security": [
           {
@@ -2061,7 +2061,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（他の提供者のリストを含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2257,7 +2257,7 @@
           "通知"
         ],
         "summary": "通知登録API",
-        "description": "通知内容を新規登録します。",
+        "description": "通知内容を新規登録します。APIを実行した提供者（アクセストークンの operator_id）が通知の所有者になります。通知先リストは自分が所有するリストのみ指定できます。",
         "operationId": "create_notification_api_v1_notifications_post",
         "security": [
           {
@@ -3120,7 +3120,7 @@
           "通知"
         ],
         "summary": "通知一括登録API",
-        "description": "複数の通知を一括で登録します。1件でも失敗した場合は全件を登録しません。",
+        "description": "複数の通知を一括で登録します。1件でも失敗した場合は全件を登録しません。APIを実行した提供者が通知の所有者になります。",
         "operationId": "bulk_create_notifications_api_v1_notifications_bulk_post",
         "security": [
           {
@@ -3572,7 +3572,7 @@
           "通知"
         ],
         "summary": "通知一括更新API",
-        "description": "複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。",
+        "description": "複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。通知の所有者のみ更新できます。",
         "operationId": "bulk_update_notifications_api_v1_notifications_bulk_put",
         "security": [
           {
@@ -3830,7 +3830,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（通知の所有者以外からの指定を含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -4026,7 +4026,7 @@
           "通知"
         ],
         "summary": "通知一括削除API",
-        "description": "複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。",
+        "description": "複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。通知の所有者のみ削除できます。",
         "operationId": "bulk_delete_notifications_api_v1_notifications_bulk_delete_post",
         "security": [
           {
@@ -4277,7 +4277,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（通知の所有者以外からの指定を含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -4426,7 +4426,7 @@
           "通知"
         ],
         "summary": "通知詳細取得API",
-        "description": "指定した通知の詳細を取得します。",
+        "description": "指定した通知の詳細を取得します。通知の所有者と受信者のみ取得できます。受信者には、通知確認状態・データ受領状態のうち自分の分のみを返します。",
         "operationId": "get_notification_api_v1_notifications__notification_id__get",
         "security": [
           {
@@ -4770,7 +4770,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（通知の所有者・受信者以外からの指定を含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -4917,7 +4917,7 @@
           "通知"
         ],
         "summary": "通知更新API",
-        "description": "指定した通知内容を更新します。",
+        "description": "指定した通知内容を更新します。通知の所有者のみ更新できます。",
         "operationId": "update_notification_api_v1_notifications__notification_id__put",
         "security": [
           {
@@ -5185,7 +5185,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（通知の所有者以外からの指定を含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -5379,7 +5379,7 @@
           "通知"
         ],
         "summary": "通知削除API",
-        "description": "指定した通知を削除します。",
+        "description": "指定した通知を削除します。通知の所有者のみ削除できます。",
         "operationId": "delete_notification_api_v1_notifications__notification_id__delete",
         "security": [
           {
@@ -5630,7 +5630,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（通知の所有者以外からの指定を含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -5826,7 +5826,7 @@
           "通知"
         ],
         "summary": "通知確認状態更新API",
-        "description": "通知の確認状態を更新します（通知確認時に実行）。",
+        "description": "通知の確認状態を更新します（通知確認時に実行）。通知の受信者のみ実行できます。",
         "operationId": "confirm_notification_api_v1_notifications__notification_id__receive_put",
         "security": [
           {
@@ -6084,7 +6084,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（通知の受信者以外からの指定を含む）",
             "content": {
               "application/json": {
                 "schema": {
@@ -6280,7 +6280,7 @@
           "通知"
         ],
         "summary": "データ受領状態更新API",
-        "description": "データの受領状態を更新します（データ受領時に実行）。",
+        "description": "データの受領状態を更新します（データ受領時に実行）。通知の受信者のみ実行できます。",
         "operationId": "receive_notification_data_api_v1_notifications__notification_id__data__data_id__receive_put",
         "security": [
           {
@@ -6548,7 +6548,7 @@
             }
           },
           "404": {
-            "description": "該当データなし",
+            "description": "該当データなし（通知の受信者以外からの指定を含む）",
             "content": {
               "application/json": {
                 "schema": {

@@ -8,7 +8,7 @@
 - ログ機能統合
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -155,12 +155,13 @@ class NotificationService(BaseService):
     @log_execution_time(logger, 'info')
     def create_notification(
         self,
+        owner_id: str,
         type_code: str,
         type_name: str,
         title: str,
         content: str,
         target_ids: Optional[List[str]] = None,
-        target_list_ids: Optional[List[str]] = None,  # ✅ 複数形に変更
+        target_list_ids: Optional[List[str]] = None,
         data_id: Optional[str] = None,
         initialize_confirmation: bool = True,
         commit: bool = True
@@ -169,6 +170,7 @@ class NotificationService(BaseService):
         通知を作成（確認状態も自動初期化）
         
         Args:
+            owner_id: 所有者ID（APIを実行した提供者のoperator_id）
             type_code: 通知種別コード
             type_name: 通知種別名
             title: 通知タイトル
@@ -184,6 +186,8 @@ class NotificationService(BaseService):
         """
         try:
             # バリデーション
+            if not owner_id or not owner_id.strip():
+                raise ValueError("Owner ID (operator_id) cannot be empty")
             if not type_code or not type_code.strip():
                 raise ValueError("Type code cannot be empty")
             if not type_name or not type_name.strip():
@@ -240,7 +244,8 @@ class NotificationService(BaseService):
                 )
             
             # 通知先の取得
-            all_target_ids = []
+            owned_target_list_ids = []
+            list_member_ids = []
             
             if target_list_ids:
                 # 複数の通知先リストからメンバーを取得
@@ -252,17 +257,14 @@ class NotificationService(BaseService):
                     }
                 )
                 
-                all_target_ids = self.target_list_repo.get_members_from_multiple_lists(target_list_ids)
+                owned_target_list_ids = self.target_list_repo.get_owned_ids(target_list_ids, owner_id)
+                list_member_ids = self.target_list_repo.get_members_from_multiple_lists(owned_target_list_ids)
                 
-                if not all_target_ids:
+                if not list_member_ids:
                     raise ValueError(f"All target lists are empty: {target_list_ids}")
             
-            elif target_ids:
-                # 直接指定されたターゲットIDを使用
-                all_target_ids = target_ids
-            
             # 重複を除去（target_idsとtarget_list_idsの両方が指定される場合に備えて）
-            all_target_ids = list(set(all_target_ids))
+            all_target_ids = list(dict.fromkeys(list(target_ids or []) + list_member_ids))
             
             # IDの生成
             notification_id = uuid.uuid4()
@@ -283,10 +285,11 @@ class NotificationService(BaseService):
             notification = self.notification_repo.create(
                 notification_id=notification_id,
                 type_id=notification_type.type_id,
+                owner_id=owner_id,
                 title=title,
                 content=content,
                 target_ids=target_ids,
-                target_list_ids=target_list_ids if target_list_ids else [],
+                target_list_ids=owned_target_list_ids,
                 status='enabled',
                 data_id=data_id
             )
@@ -314,9 +317,6 @@ class NotificationService(BaseService):
             )
             
 
-            # 中間テーブルからtarget_list_idsを取得
-            resolved_target_list_ids = target_list_ids or []
-
             response = {
                 "notification_id": notification.notification_id,
                 "type_code": type_code,
@@ -324,7 +324,7 @@ class NotificationService(BaseService):
                 "title": title,
                 "content": content,
                 "target_ids": target_ids or [],
-                "target_list_ids": resolved_target_list_ids,
+                "target_list_ids": owned_target_list_ids,
                 "data_id": data_id
             }
             return response
@@ -354,6 +354,37 @@ class NotificationService(BaseService):
             通知
         """
         return self.notification_repo.get_by_id(notification_id, include_relations)
+
+    @log_execution_time(logger, 'info')
+    def get_notification_for_operator(
+        self,
+        notification_id: str,
+        operator_id: Optional[str]
+    ) -> Optional[Tuple[Notification, bool]]:
+        """
+        通知を取得（通知の所有者または受信者のみ）
+
+        Args:
+            notification_id: 通知ID
+            operator_id: APIを実行したoperator_id
+
+        Returns:
+            (通知, 所有者かどうか)。存在しない場合、所有者でも受信者でもない場合はNone
+        """
+        if not operator_id:
+            return None
+
+        notification = self.notification_repo.get_by_id(notification_id, include_relations=True)
+        if notification is None:
+            return None
+
+        if notification.owner_id == operator_id:
+            return notification, True
+
+        if any(c.target_id == operator_id for c in notification.confirmations):
+            return notification, False
+
+        return None
     
     @log_execution_time(logger, 'info')
     def get_user_notifications(
@@ -418,6 +449,7 @@ class NotificationService(BaseService):
     def update_notification(
         self,
         notification_id: str,
+        owner_id: Optional[str],
         expected_updated_at: datetime,
         title: Optional[str] = None,
         content: Optional[str] = None,
@@ -429,6 +461,7 @@ class NotificationService(BaseService):
         
         Args:
             notification_id: 通知ID
+            owner_id: 所有者ID（APIを実行したoperator_id）
             expected_updated_at: クライアントが取得時に保持していた更新日時
             title: 新しいタイトル
             content: 新しい内容
@@ -453,6 +486,7 @@ class NotificationService(BaseService):
             expected_updated_at = to_naive_utc(expected_updated_at)
             notification = self.notification_repo.update(
                 notification_id,
+                owner_id,
                 expected_updated_at,
                 title,
                 content,
@@ -460,7 +494,7 @@ class NotificationService(BaseService):
             )
             
             if notification is None:
-                current = self.notification_repo.get_by_id(notification_id)
+                current = self.notification_repo.get_owned_by(notification_id, owner_id)
                 if current is None:
                     raise RecordNotFoundError("Notification", notification_id)
                 raise OptimisticLockError(
@@ -489,12 +523,13 @@ class NotificationService(BaseService):
             raise
     
     @log_execution_time(logger, 'info')
-    def delete_notification(self, notification_id: str, commit: bool = True) -> bool:
+    def delete_notification(self, notification_id: str, owner_id: Optional[str], commit: bool = True) -> bool:
         """
         通知を削除（論理削除）
         
         Args:
             notification_id: 通知ID
+            owner_id: 所有者ID（APIを実行したoperator_id）
             commit: Falseの場合はcommitしない
         
         Returns:
@@ -506,7 +541,7 @@ class NotificationService(BaseService):
                 extra={'notification_id': notification_id}
             )
             
-            result = self.notification_repo.delete(notification_id)
+            result = self.notification_repo.delete(notification_id, owner_id)
             
             if not result:
                 raise RecordNotFoundError("Notification", notification_id)
@@ -579,12 +614,13 @@ class NotificationService(BaseService):
             raise
 
     @log_execution_time(logger, 'info')
-    def bulk_delete_notifications(self, notification_ids: List[str]) -> int:
+    def bulk_delete_notifications(self, notification_ids: List[str], owner_id: Optional[str]) -> int:
         """
         複数の通知を一括削除（論理削除）
 
         Args:
             notification_ids: 通知IDのリスト
+            owner_id: 所有者ID（APIを実行したoperator_id）
 
         Returns:
             削除件数
@@ -592,7 +628,7 @@ class NotificationService(BaseService):
         try:
             # notification_id の順に削除する
             for notification_id in sorted(notification_ids):
-                self.delete_notification(notification_id, commit=False)
+                self.delete_notification(notification_id, owner_id, commit=False)
             self.commit()
             logger.info("Notifications bulk deleted", extra={'count': len(notification_ids)})
             return len(notification_ids)
@@ -628,6 +664,9 @@ class NotificationService(BaseService):
             # Check if notification exists
             notification = self.notification_repo.get_by_id(notification_id)
             if notification is None:
+                raise RecordNotFoundError("Notification", notification_id)
+
+            if self.confirmed_repo.get(notification_id, user_id) is None:
                 raise RecordNotFoundError("Notification", notification_id)
             
             confirmation = self.confirmed_repo.create_or_update(
@@ -689,14 +728,17 @@ class NotificationService(BaseService):
             if notification is None:
                 raise RecordNotFoundError("Notification", notification_id)
 
-            # ✅ データ受領状態を作成または更新
+            if self.confirmed_repo.get(notification_id, user_id) is None:
+                raise RecordNotFoundError("Notification", notification_id)
+
+            # データ受領状態を作成または更新
             data_confirmation = self.data_confirmed_repo.create_or_update(
                 notification_id=notification_id,
                 target_id=user_id,
                 status='confirmed'
             )
 
-            # ✅ トランザクションコミット
+            # トランザクションコミット
             self.commit()
 
             logger.info(

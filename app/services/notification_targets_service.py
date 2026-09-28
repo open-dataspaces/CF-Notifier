@@ -185,6 +185,7 @@ class NotificationTargetListService(BaseService):
     def get_target_list(
         self,
         target_list_id: str,
+        owner_id: Optional[str],
         include_members: bool = False
     ) -> Optional[NotificationTargetList]:
         """
@@ -192,12 +193,13 @@ class NotificationTargetListService(BaseService):
         
         Args:
             target_list_id: 通知先リストID
+            owner_id: 所有者ID（APIを実行したoperator_id）
             include_members: メンバー情報も取得するか
         
         Returns:
             通知先リスト
         """
-        target_list = self.repository.get_by_id(target_list_id, include_members)
+        target_list = self.repository.get_owned_by(target_list_id, owner_id, include_members)
 
         if target_list == None:
             return None
@@ -247,6 +249,7 @@ class NotificationTargetListService(BaseService):
     def update_target_list(
         self,
         target_list_id: str,
+        operator_id: Optional[str],
         expected_updated_at: datetime,
         name: Optional[str] = None,
         owner_id: Optional[str] = None,
@@ -257,6 +260,7 @@ class NotificationTargetListService(BaseService):
 
         Args:
             target_list_id: 通知先リストID
+            operator_id: APIを実行したoperator_id
             expected_updated_at: クライアントが取得時に保持していた更新日時
             name: 新しいリスト名称
             owner_id: 新しい所有者ID
@@ -281,6 +285,7 @@ class NotificationTargetListService(BaseService):
             expected_updated_at = to_naive_utc(expected_updated_at)
             target_list = self.repository.update(
                 target_list_id,
+                operator_id,
                 expected_updated_at,
                 name=name,
                 owner_id=owner_id,
@@ -288,7 +293,7 @@ class NotificationTargetListService(BaseService):
             )
 
             if target_list is None:
-                current = self.repository.get_by_id(target_list_id)
+                current = self.repository.get_owned_by(target_list_id, operator_id)
                 if current is None:
                     raise RecordNotFoundError("NotificationTargetList", target_list_id)
                 raise OptimisticLockError(
@@ -324,12 +329,13 @@ class NotificationTargetListService(BaseService):
             raise
     
     @log_execution_time(logger, 'info')
-    def delete_target_list(self, target_list_id: str) -> bool:
+    def delete_target_list(self, target_list_id: str, owner_id: Optional[str]) -> bool:
         """
         通知先リストを削除
         
         Args:
             target_list_id: 通知先リストID
+            owner_id: 所有者ID（APIを実行したoperator_id）
         
         Returns:
             削除成功時True
@@ -340,7 +346,7 @@ class NotificationTargetListService(BaseService):
                 extra={'target_list_id': target_list_id}
             )
             
-            result = self.repository.delete(target_list_id)
+            result = self.repository.delete(target_list_id, owner_id)
             
             if not result:
                 raise RecordNotFoundError("NotificationTargetList", target_list_id)

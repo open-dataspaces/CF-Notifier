@@ -17,7 +17,7 @@ from sqlalchemy.exc import (
     SQLAlchemyError,
     NoResultFound
 )
-from sqlalchemy import and_, or_, func, update as sa_update
+from sqlalchemy import and_, func, update as sa_update
 
 # ログ設定のインポート
 from app.core.logging import get_logger, log_execution_time
@@ -25,8 +25,6 @@ logger = get_logger(__name__)
 
 # モデルのインポート
 from app.models.notifications_model import (
-    NotificationTargetList,
-    TargetIds,
     NotificationType,
     Notification,
     NotificationConfirmed,
@@ -322,6 +320,7 @@ class NotificationRepository(BaseRepository):
         self,
         notification_id: uuid.UUID,
         type_id: uuid.UUID,
+        owner_id: str,
         title: str,
         content: str,
         target_ids: Optional[List[str]] = None,
@@ -333,23 +332,25 @@ class NotificationRepository(BaseRepository):
             logger.info("Creating notification", extra={
                 'notification_id': str(notification_id),
                 'type_id': str(type_id),
+                'owner_id': owner_id,
                 'title': title,
                 'target_count': len(target_ids) if target_ids else 0,
                 'target_list_ids': target_list_ids,
                 'status': status
             })
 
-            # ✅ target_idsを文字列化
+            # target_idsを文字列化
             if target_ids:
                 target_ids = [str(t) for t in target_ids]
 
-            # ✅ data_idも文字列化
+            # data_idも文字列化
             if data_id and isinstance(data_id, uuid.UUID):
                 data_id = str(data_id)
 
             notification = Notification(
                 notification_id=notification_id,
                 type_id=type_id,
+                owner_id=owner_id,
                 title=title,
                 content=content,
                 target_ids=target_ids,
@@ -358,23 +359,22 @@ class NotificationRepository(BaseRepository):
             )
 
             self.db.add(notification)
-
-            # ✅ target_list_idsがある場合、中間テーブル経由で関連付け
-            if target_list_ids:
-                # Handle both UUID objects and strings
-                uuid_list_ids = [
-                    t if isinstance(t, uuid.UUID) else uuid.UUID(str(t))
-                    for t in target_list_ids
-                ]
-                target_lists = (
-                    self.db.query(NotificationTargetList)
-                    .filter(NotificationTargetList.target_list_id.in_(uuid_list_ids))
-                    .all()
-                )
-                for tl in target_lists:
-                    notification.target_lists.append(tl)
-
             self.db.flush()
+
+            # target_list_idsがある場合、中間テーブル経由で関連付け
+            if target_list_ids:
+                self.db.execute(
+                    notification_target_list_map.insert(),
+                    [
+                        {
+                            'notification_id': notification_id,
+                            'target_list_id': t if isinstance(t, uuid.UUID) else uuid.UUID(str(t)),
+                            'owner_id': owner_id,
+                        }
+                        for t in target_list_ids
+                    ]
+                )
+
             logger.info("Notification created (not committed)", extra={'notification_id': str(notification_id)})
             return notification
 
@@ -407,20 +407,32 @@ class NotificationRepository(BaseRepository):
             raise
 
     @log_execution_time(logger, 'debug')
+    def get_owned_by(
+        self,
+        notification_id: uuid.UUID,
+        owner_id: Optional[str],
+        include_relations: bool = False
+    ) -> Optional[Notification]:
+        """
+        所有者を指定して通知を取得（他の所有者の通知・所有者なしの通知・削除済みの通知はNone）
+        """
+        if owner_id is None:
+            return None
+        notification = self.get_by_id(notification_id, include_relations)
+        if notification is None or notification.owner_id != owner_id:
+            return None
+        return notification
+
+    @log_execution_time(logger, 'debug')
     def get_by_target_id(self, target_id: str, status: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Notification]:
         try:
-            # ✅ target_list_id参照を削除し、中間テーブルJOINに変更
             query = self.db.query(Notification).options(
                 joinedload(Notification.notification_type)
+            ).join(
+                NotificationConfirmed,
+                NotificationConfirmed.notification_id == Notification.notification_id
             ).filter(
-                or_(
-                    Notification.target_ids.contains([target_id]),
-                    Notification.notification_id.in_(
-                        self.db.query(notification_target_list_map.c.notification_id)
-                        .join(TargetIds, TargetIds.target_list_id == notification_target_list_map.c.target_list_id)
-                        .filter(TargetIds.target_id == target_id)
-                    )
-                )
+                NotificationConfirmed.target_id == target_id
             )
             query = query.filter(Notification.status != NotificationStatus.DELETED.value)
             if status:
@@ -492,6 +504,7 @@ class NotificationRepository(BaseRepository):
     def update(
         self,
         notification_id: str,
+        owner_id: Optional[str],
         expected_updated_at: datetime,
         title: Optional[str] = None,
         content: Optional[str] = None,
@@ -502,19 +515,23 @@ class NotificationRepository(BaseRepository):
         
         Args:
             notification_id: 通知ID
+            owner_id: 所有者ID（APIを実行したoperator_id）
             expected_updated_at: クライアントが取得時に保持していた更新日時
             title: 新しいタイトル
             content: 新しい内容
             status: 新しいステータス
         
         Returns:
-            更新された通知(存在しない、または更新日時が一致しない場合はNone)
+            更新された通知(存在しない、所有者が異なる、または更新日時が一致しない場合はNone)
         """
         try:
             logger.info(
                 "Updating notification",
                 extra={'notification_id': notification_id}
             )
+            
+            if owner_id is None:
+                return None
             
             values = {'updated_at': datetime.utcnow()}
             if title is not None:
@@ -528,6 +545,7 @@ class NotificationRepository(BaseRepository):
                 sa_update(Notification)
                 .where(
                     Notification.notification_id == notification_id,
+                    Notification.owner_id == owner_id,
                     Notification.status != NotificationStatus.DELETED.value,
                     Notification.updated_at == expected_updated_at
                 )
@@ -537,7 +555,7 @@ class NotificationRepository(BaseRepository):
 
             if result.rowcount == 0:
                 logger.warning(
-                    "Cannot update: notification not found or updated_at mismatch",
+                    "Cannot update: notification not found, not owned, or updated_at mismatch",
                     extra={'notification_id': notification_id}
                 )
                 return None
@@ -557,13 +575,14 @@ class NotificationRepository(BaseRepository):
             raise
     
     @log_execution_time(logger, 'debug')
-    def delete(self, notification_id: str) -> bool:
+    def delete(self, notification_id: str, owner_id: Optional[str]) -> bool:
         """
         通知を削除(論理削除:ステータスをDELETEDに変更)
         commitはService層で実施
         
         Args:
             notification_id: 通知ID
+            owner_id: 所有者ID（APIを実行したoperator_id）。所有者が異なる通知は削除しない
         
         Returns:
             削除成功時True
@@ -574,11 +593,11 @@ class NotificationRepository(BaseRepository):
                 extra={'notification_id': notification_id}
             )
             
-            notification = self.get_by_id(notification_id)
+            notification = self.get_owned_by(notification_id, owner_id)
             
             if not notification:
                 logger.warning(
-                    "Cannot delete: notification not found",
+                    "Cannot delete: notification not found or not owned",
                     extra={'notification_id': notification_id}
                 )
                 return False
