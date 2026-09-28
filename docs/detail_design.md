@@ -52,7 +52,7 @@ alt 通知先リスト作成
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB1: 通知先リスト登録(INSERT)
+  DIST->>DIST_DB1: 通知先リスト登録(INSERT ※リスト所有者IDがoperator_idと一致する場合のみ。異なる場合は403)
   DIST_DB1-->>DIST: 作成結果
   DIST-->>CORE_L2: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
   CORE_L2-->>P_SA: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
@@ -67,7 +67,7 @@ alt 通知先リスト更新
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB1: 通知先リスト情報を更新(UPDATE ※更新日時が一致する場合のみ)
+  DIST->>DIST_DB1: 通知先リスト情報を更新(UPDATE ※所有者のみ、更新日時が一致する場合のみ)
   DIST_DB1-->>DIST: 更新結果
   Note over DIST: 更新件数0件（更新日時の不一致）の場合は 409 Conflict
   DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
@@ -83,7 +83,7 @@ alt 通知先リスト取得
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB1: 指定したIDの通知先リストを取得(SELECT)
+  DIST->>DIST_DB1: 指定したIDの通知先リストを取得(SELECT ※所有者のみ)
   DIST_DB1-->>DIST: 指定した通知先リスト情報
   DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
   CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
@@ -98,7 +98,8 @@ alt 通知先リスト削除
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB1: 指定した通知先リストを削除(DELETE)
+  DIST->>DIST_DB1: 指定した通知先リストを削除(DELETE ※所有者のみ)
+  DIST->>DIST_DB2: 削除したリストを指定した通知の更新日時を更新(UPDATE)
   DIST_DB1-->>DIST: 削除結果
   DIST-->>CORE_L2: 204 No Content
   CORE_L2-->>P_SA: 204 No Content
@@ -113,7 +114,7 @@ alt 通知先リスト一覧取得
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB1: 通知先リストを取得(SELECT)
+  DIST->>DIST_DB1: 所有者がoperator_idの通知先リストを取得(SELECT)
   DIST_DB1-->>DIST: 通知先リスト一覧
   DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
   CORE_L2-->>P_SA: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
@@ -170,7 +171,7 @@ alt 通知情報登録
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB2: 通知情報登録(INSERT)
+  DIST->>DIST_DB2: 通知情報登録(INSERT ※所有者=operator_id。通知先リストは自分が所有するもののみ)
   DIST_DB2-->>DIST: 登録結果
   DIST-->>CORE_L2: 201 Created<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
   CORE_L2-->>P_SA: 201 Created<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
@@ -185,7 +186,7 @@ alt 通知情報更新
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB2: 指定した通知情報更新(UPDATE ※更新日時が一致する場合のみ)
+  DIST->>DIST_DB2: 指定した通知情報更新(UPDATE ※所有者のみ、更新日時が一致する場合のみ)
   DIST_DB2-->>DIST: 更新結果
   Note over DIST: 更新件数0件（更新日時の不一致）の場合は 409 Conflict
   DIST-->>CORE_L2: 200 OK<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
@@ -201,7 +202,7 @@ alt 通知情報取得
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB2: 指定した通知詳細取得(GET)
+  DIST->>DIST_DB2: 指定した通知詳細取得(GET ※所有者・受信者のみ。受信者には自分の確認状態のみ返す)
   DIST_DB2-->>DIST: 取得結果
   DIST-->>CORE_L2: 200 OK<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
   CORE_L2-->>P_SA: 200 OK<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
@@ -216,7 +217,7 @@ alt 通知情報削除
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB2: 指定した通知情報削除(DELETE)
+  DIST->>DIST_DB2: 指定した通知情報削除(DELETE ※所有者のみ)
   DIST_DB2-->>DIST: 削除結果
   DIST-->>CORE_L2: 204 No Content
   CORE_L2-->>P_SA: 204 No Content
@@ -266,7 +267,7 @@ alt 通知情報一括登録
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 通知登録APIと同じエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB2: 通知情報登録(INSERT)を件数分実行（1トランザクション）
+  DIST->>DIST_DB2: 通知情報登録(INSERT ※所有者=operator_id)を件数分実行（1トランザクション）
   DIST_DB2-->>DIST: 登録結果
   Note over DIST,DIST_DB2: 1件でも失敗した場合は全件ロールバックし、エラーを返す
   DIST-->>CORE_L2: 201 Created<BR>([通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID]のリスト)
@@ -282,7 +283,7 @@ alt 通知情報一括更新
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 通知更新APIと同じエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB2: 通知情報更新(UPDATE ※更新日時が一致する場合のみ)を通知ID順に件数分実行（1トランザクション）
+  DIST->>DIST_DB2: 通知情報更新(UPDATE ※所有者のみ、更新日時が一致する場合のみ)を通知ID順に件数分実行（1トランザクション）
   DIST_DB2-->>DIST: 更新結果
   Note over DIST,DIST_DB2: 1件でも失敗（更新日時の不一致を含む）した場合は全件ロールバックし、エラーを返す
   DIST-->>CORE_L2: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時]のリスト)
@@ -298,7 +299,7 @@ alt 通知情報一括削除
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 通知削除APIと同じエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
-  DIST->>DIST_DB2: 通知情報削除(DELETE)を通知ID順に件数分実行（1トランザクション）
+  DIST->>DIST_DB2: 通知情報削除(DELETE ※所有者のみ)を通知ID順に件数分実行（1トランザクション）
   DIST_DB2-->>DIST: 削除結果
   Note over DIST,DIST_DB2: 1件でも失敗した場合は全件ロールバックし、エラーを返す
   DIST-->>CORE_L2: 204 No Content
@@ -356,7 +357,7 @@ alt 通知一覧取得
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
   FGA-->>DIST: 認可結果 (allowed)
   DIST-->>DIST: アクセストークンからユーザID取得
-  DIST->>DIST_DB2: ユーザIDに紐づく通知情報を取得(SELECT)
+  DIST->>DIST_DB2: ユーザIDが受信者（登録時点で確定）である通知情報を取得(SELECT)
   DIST_DB2-->>DIST: 通知情報
   DIST-->>CORE_L2: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,データID,通知受信者の詳細リスト,データ受信者の詳細リスト,通知登録日時、通知更新日時])<BR>ETag
   CORE_L2-->>C_SA: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,データID,通知受信者の詳細リスト,データ受信者の詳細リスト,通知登録日時、通知更新日時])<BR>ETag
@@ -417,7 +418,7 @@ CORE_L3-->>DIST: OK
 DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
 FGA-->>DIST: 認可結果 (allowed)
 DIST->>DIST: アクセストークンから通知先ユーザIDを取得
-DIST->>DIST_DB2:  指定した通知IDの通知確認済み​受信者​リストのステータスを受信済みに更新​(UPDATE)
+DIST->>DIST_DB2:  指定した通知IDの通知確認済み​受信者​リストのステータスを受信済みに更新​(UPDATE ※受信者のみ)
 DIST_DB2-->>DIST: 更新結果
 DIST-->>CORE_L2: 200 OK<BR>(通知更新日時)
 CORE_L2-->>C_SA: 200 OK<BR>(通知更新日時)
@@ -475,7 +476,7 @@ CORE_L3-->>DIST: OK
 DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
 FGA-->>DIST: 認可結果 (allowed)
 DIST->>DIST: アクセストークンから通知先ユーザIDを取得
-DIST->>DIST_DB2: 指定した通知ID・データIDのデータ受領状態を受領済みに更新(UPDATE)
+DIST->>DIST_DB2: 指定した通知ID・データIDのデータ受領状態を受領済みに更新(UPDATE ※受信者のみ)
 DIST_DB2-->>DIST: 更新結果
 DIST-->>CORE_L2: 200 OK<BR>(データ更新日時)
 CORE_L2-->>C_SA: 200 OK<BR>(データ更新日時)
@@ -501,8 +502,11 @@ CREATE TABLE IF NOT EXISTS notification_target_list (
   name                   varchar(255) NOT NULL,
   owner_id               varchar(255) NOT NULL,
   created_at             timestamptz NOT NULL DEFAULT now(),
-  updated_at             timestamptz NOT NULL DEFAULT now()
+  updated_at             timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_notification_target_list_id_owner_id UNIQUE (target_list_id, owner_id)
 );
+
+CREATE INDEX IF NOT EXISTS ix_notification_target_list_owner_id ON notification_target_list (owner_id);
 ```
 
 ---
@@ -540,6 +544,7 @@ CREATE TABLE IF NOT EXISTS target_ids (
 | ------------------------ | ------------ | ----------------------------------------- | ---------------- |
 | notification_id         | uuid         | **PK**, DEFAULT gen\_random\_uuid()       | 通知ID             |
 | type_id       | uuid  | **NOT NULL**, **FK → notification_type**  | 通知種別ID           |
+| owner_id      | varchar(255) | NULL（新規登録時は必須）            | 所有者ID（通知を登録した提供者のoperator_id）。NULLは所有者を補完できなかった既存データのみ |
 | title      | varchar(500) | **NOT NULL**                              | 通知タイトル           |
 | content    | text         | **NOT NULL**                              | 通知内容             |
 | target_ids        | varchar(255)\[]      | NULL                              | 通知受信者IDリスト |
@@ -554,6 +559,7 @@ CREATE TABLE IF NOT EXISTS target_ids (
 CREATE TABLE IF NOT EXISTS notification (
   notification_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   type_id   uuid NOT NULL REFERENCES notification_type(type_id),
+  owner_id  varchar(255),
   title     varchar(500) NOT NULL,
   content   text         NOT NULL,
   target_ids        varchar(255)[],
@@ -562,8 +568,12 @@ CREATE TABLE IF NOT EXISTS notification (
   created_at             timestamptz  NOT NULL DEFAULT now(),
   updated_at             timestamptz  NOT NULL DEFAULT now(),
   CONSTRAINT check_target_ids_non_empty
-    CHECK (array_length(target_ids, 1) > 0 OR target_ids IS NULL)
+    CHECK (array_length(target_ids, 1) > 0 OR target_ids IS NULL),
+  CONSTRAINT uq_notification_id_owner_id UNIQUE (notification_id, owner_id),
+  CONSTRAINT ck_notification_owner_id_not_null CHECK (owner_id IS NOT NULL) NOT VALID
 );
+
+CREATE INDEX IF NOT EXISTS ix_notification_owner_id ON notification (owner_id);
 
 -- ENUM型定義
 CREATE TYPE notificationstatus AS ENUM ('enabled', 'disabled', 'deleted');
@@ -599,6 +609,7 @@ CREATE TABLE IF NOT EXISTS notification_type (
 | ------------------------ | ------------ | ----------------------------------------- | ---------------- |
 | notification_id         | uuid         | **PK**, **FK → notification**             | 通知ID             |
 | target_list_id          | uuid         | **PK**, **FK → notification\_target\_list** | 通知先リストID       |
+| owner_id                | varchar(255) | NULL（新規登録時は必須）                   | 所有者ID（通知と通知先リストで同一） |
 
 > 主キー：(`notification_id`, `target_list_id`)
 
@@ -606,6 +617,7 @@ CREATE TABLE IF NOT EXISTS notification_type (
 CREATE TABLE IF NOT EXISTS notification_target_list_map (
   notification_id uuid NOT NULL,
   target_list_id uuid NOT NULL,
+  owner_id varchar(255),
   PRIMARY KEY (notification_id, target_list_id),
   CONSTRAINT fk_map_notification
     FOREIGN KEY (notification_id)
@@ -614,7 +626,16 @@ CREATE TABLE IF NOT EXISTS notification_target_list_map (
   CONSTRAINT fk_map_target_list
     FOREIGN KEY (target_list_id)
     REFERENCES notification_target_list(target_list_id)
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT fk_map_notification_owner
+    FOREIGN KEY (notification_id, owner_id)
+    REFERENCES notification(notification_id, owner_id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_map_target_list_owner
+    FOREIGN KEY (target_list_id, owner_id)
+    REFERENCES notification_target_list(target_list_id, owner_id)
+    ON DELETE CASCADE,
+  CONSTRAINT ck_notification_target_list_map_owner_id_not_null CHECK (owner_id IS NOT NULL) NOT VALID
 );
 ```
 
@@ -743,15 +764,15 @@ WHERE target_list_id = ?;
 ```sql
 UPDATE notification 
 SET title = ?, content = ?, status = ?, updated_at = now() 
-WHERE notification_id = ? AND status <> 'deleted' AND updated_at = ?;
+WHERE notification_id = ? AND owner_id = ? AND status <> 'deleted' AND updated_at = ?;
 
 UPDATE notification_target_list 
 SET name = ?, owner_id = ?, updated_at = now() 
-WHERE target_list_id = ? AND updated_at = ?;
+WHERE target_list_id = ? AND owner_id = ? AND updated_at = ?;
 -- 更新件数が1件の場合のみ、続けて target_ids を洗い替える（DELETE → INSERT）
 ```
 - WHERE条件で元の`updated_at`をチェック
-- 更新件数が0件の場合、対象データが存在しなければ404（該当データなし）、存在すれば競合発生と判定
+- 更新件数が0件の場合、対象データが存在しない（他の所有者のデータを含む）場合は404（該当データなし）、存在すれば競合発生と判定
 
 #### (3). 競合処理段階
 - 競合検出時はHTTPステータス409（Conflict）で応答
@@ -790,6 +811,45 @@ WHERE target_list_id = ? AND updated_at = ?;
   3. いずれもない場合は200
 - 304応答はボディを含まず、ETag / Last-Modified / Cache-Control / X-TrackingId 等のヘッダを含む
 - GET以外のメソッド、200以外の応答には付与しない
+
+### 2.4 データ分離仕様（所有者・受信者）
+
+#### 基本方針
+通知・通知先リストは、登録した提供者（所有者）ごとに分離し、所有者・受信者以外はアクセスできないようにする。
+権限のないデータは、存在しないデータと同じ扱い（404）とする。
+
+#### 所有者と受信者
+- 所有者: 通知・通知先リストを登録した提供者。アクセストークンの`operator_id`を`owner_id`として保持する
+  - 通知: 登録時のアクセストークンの`operator_id`を設定する
+  - 通知先リスト: リクエストの`owner_id`がアクセストークンの`operator_id`と一致しない場合は 403 を返す（`OPERATOR_ID_VERIFICATION_ENABLED=false` の場合、および開発環境では検証しない）
+- 受信者: 通知の登録時点で確定した通知受信者（直接指定した受信者と、指定した通知先リストのメンバー）
+  - 登録時に受信者ごとの通知確認状態（`notification_confirmed`）を作成し、受信者の判定に使用する
+  - 登録後に通知先リストのメンバーを変更・削除しても、登録済みの通知の受信者は変わらない
+- アクセストークンに`operator_id`が含まれない場合は、所有者・受信者のいずれとしても扱わない
+
+#### APIごとのアクセス可否
+| API | 所有者 | 受信者 | それ以外 |
+|-----|--------|--------|----------|
+| GET/PUT/DELETE /api/v1/notification-targets/{target_list_id} | ○ | - | 404 |
+| GET /api/v1/notification-targets | 自分が所有するリストのみ返す | - | - |
+| POST /api/v1/notifications、POST /api/v1/notifications/bulk | ○（指定できる通知先リストは自分が所有するもののみ。他の所有者のリストは存在しないリストと同じ扱い） | - | - |
+| GET /api/v1/notifications/{notification_id} | ○ | ○（通知確認状態・データ受領状態は自分の分のみ返す） | 404 |
+| PUT/DELETE /api/v1/notifications/{notification_id}、PUT /api/v1/notifications/bulk、POST /api/v1/notifications/bulk-delete | ○ | 404 | 404 |
+| GET /api/v1/notifications | - | 自分が受信者である通知のみ返す | - |
+| PUT /api/v1/notifications/{notification_id}/receive、PUT /api/v1/notifications/{notification_id}/data/{data_id}/receive | - | ○ | 404 |
+
+> 受信者にも、通知の宛先（受信者IDリスト `target_ids`、通知先リストID `target_list_ids`）は返す。通知先リスト経由の受信者は返さない
+
+#### DBによる保証
+- 新しく登録する通知・中間テーブルの行は、所有者IDを必須とする（CHECK制約。所有者なしの既存データを対象外とするため NOT VALID）
+- 中間テーブル（`notification_target_list_map`）に所有者IDを持たせ、複合外部キーで通知と通知先リストの所有者が一致することを保証する
+  - 他の所有者の通知先リストとの関連付け、関連付け済みの通知先リストの所有者変更は、DBがエラーにする
+- `owner_id` にインデックスを作成する（`notification`, `notification_target_list`）
+
+#### 既存データの移行（マイグレーション 002_owner_separation）
+- 通知の所有者: 通知先リスト経由で登録された通知は、リストの所有者で補完する。受信者を直接指定して登録された通知、所有者の異なる複数のリストに紐づく通知は、所有者なし（NULL）とする
+- 所有者なしの通知は、どの提供者からも詳細取得・更新・削除できない。受信者による一覧取得・詳細取得・状態更新は従来どおり行える
+- 受信者IDと通知先リストを両方指定して登録された通知で、直接指定した受信者の通知確認状態が作成されていなかったものを補完する
 
 ## 3. ログ設計
 

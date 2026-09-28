@@ -47,7 +47,7 @@ router = APIRouter()
     response_model=NotificationCreateResponse,
     status_code=status.HTTP_201_CREATED,
     summary="通知登録API",
-    description="通知内容を新規登録します。",
+    description="通知内容を新規登録します。APIを実行した提供者（アクセストークンの operator_id）が通知の所有者になります。通知先リストは自分が所有するリストのみ指定できます。",
     responses={
         status.HTTP_201_CREATED: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
@@ -90,6 +90,7 @@ async def create_notification(
     try:
         service = get_notification_service(db)
         result = service.create_notification(
+            owner_id=credential.get("operator_id"),
             type_code=request.type_code,
             type_name=request.type_name,
             title=request.title,
@@ -172,7 +173,7 @@ async def create_notification(
     response_model=NotificationBulkCreateResponse,
     status_code=status.HTTP_201_CREATED,
     summary="通知一括登録API",
-    description="複数の通知を一括で登録します。1件でも失敗した場合は全件を登録しません。",
+    description="複数の通知を一括で登録します。1件でも失敗した場合は全件を登録しません。APIを実行した提供者が通知の所有者になります。",
     responses={
         status.HTTP_201_CREATED: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
@@ -209,6 +210,7 @@ async def bulk_create_notifications(
         service = get_notification_service(db)
         results = service.bulk_create_notifications([
             {
+                "owner_id": credential.get("operator_id"),
                 "type_code": n.type_code,
                 "type_name": n.type_name,
                 "title": n.title,
@@ -288,13 +290,13 @@ async def bulk_create_notifications(
     "/notifications/bulk",
     response_model=NotificationBulkUpdateResponse,
     summary="通知一括更新API",
-    description="複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。",
+    description="複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。通知の所有者のみ更新できます。",
     responses={
         status.HTTP_200_OK: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（通知の所有者以外からの指定を含む）", "model": ErrorResponse},
         status.HTTP_409_CONFLICT: {"description": "リソース競合エラー（updated_at が最新でない場合を含む）", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
@@ -326,6 +328,7 @@ async def bulk_update_notifications(
         results = service.bulk_update_notifications([
             {
                 "notification_id": n.notification_id,
+                "owner_id": credential.get("operator_id"),
                 "expected_updated_at": n.updated_at,
                 "title": n.title,
                 "content": n.content,
@@ -401,13 +404,13 @@ async def bulk_update_notifications(
     "/notifications/bulk-delete",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="通知一括削除API",
-    description="複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。",
+    description="複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。通知の所有者のみ削除できます。",
     responses={
         status.HTTP_204_NO_CONTENT: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（通知の所有者以外からの指定を含む）", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
 )
@@ -435,7 +438,7 @@ async def bulk_delete_notifications(
 
     try:
         service = get_notification_service(db)
-        service.bulk_delete_notifications(request.notification_ids)
+        service.bulk_delete_notifications(request.notification_ids, credential.get("operator_id"))
 
         logger.info(
             "Notifications bulk deleted successfully",
@@ -589,13 +592,13 @@ async def list_notifications(
     "/notifications/{notification_id}",
     response_model=Notification,
     summary="通知詳細取得API",
-    description="指定した通知の詳細を取得します。",
+    description="指定した通知の詳細を取得します。通知の所有者と受信者のみ取得できます。受信者には、通知確認状態・データ受領状態のうち自分の分のみを返します。",
     responses={
         status.HTTP_200_OK: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（通知の所有者・受信者以外からの指定を含む）", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
 )
@@ -611,6 +614,8 @@ async def get_notification(
     request_id = headers.get('x_tracking_id') or str(uuid4())
     set_request_id(request_id)
 
+    user_id = credential.get("operator_id")
+
     logger.info(
         "Received get notification request",
         endpoint=f"/api/v1/notifications/{notification_id}",
@@ -620,9 +625,9 @@ async def get_notification(
 
     try:
         service = get_notification_service(db)
-        result = service.get_notification(
+        result = service.get_notification_for_operator(
             notification_id=notification_id,
-            include_relations=True
+            operator_id=user_id
         )
 
         if result is None:
@@ -636,19 +641,30 @@ async def get_notification(
                 detail=f"Notification not found: {notification_id}"
             )
 
+        notification, is_owner = result
+        body = Notification.model_validate(notification)
+        if not is_owner:
+            body.notification_confirmed_targets = [
+                t for t in body.notification_confirmed_targets if t.target_id == user_id
+            ]
+            body.data_confirmed_targets = [
+                t for t in body.data_confirmed_targets if t.target_id == user_id
+            ]
+
         response.headers["Last-Modified"] = to_http_date(max(
-            [result.updated_at]
-            + [c.updated_at for c in result.confirmations]
-            + [c.updated_at for c in result.data_confirmations]
+            [body.updated_at]
+            + [t.updated_at for t in body.notification_confirmed_targets]
+            + [t.updated_at for t in body.data_confirmed_targets]
         ))
 
         logger.info(
             "Notification retrieved successfully",
             notification_id=str(notification_id),
+            is_owner=is_owner,
             status_code=200
         )
 
-        return result
+        return body
 
     except HTTPException:
         raise
@@ -704,13 +720,13 @@ async def get_notification(
     "/notifications/{notification_id}",
     response_model=Notification,
     summary="通知更新API",
-    description="指定した通知内容を更新します。",
+    description="指定した通知内容を更新します。通知の所有者のみ更新できます。",
     responses={
         status.HTTP_200_OK: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（通知の所有者以外からの指定を含む）", "model": ErrorResponse},
         status.HTTP_409_CONFLICT: {"description": "リソース競合エラー（updated_at が最新でない場合を含む）", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
@@ -738,6 +754,7 @@ async def update_notification(
         service = get_notification_service(db)
         result = service.update_notification(
             notification_id=notification_id,
+            owner_id=credential.get("operator_id"),
             expected_updated_at=request.updated_at,
             title=request.title,
             content=request.content,
@@ -815,13 +832,13 @@ async def update_notification(
     "/notifications/{notification_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="通知削除API",
-    description="指定した通知を削除します。",
+    description="指定した通知を削除します。通知の所有者のみ削除できます。",
     responses={
         status.HTTP_204_NO_CONTENT: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（通知の所有者以外からの指定を含む）", "model": ErrorResponse},
         status.HTTP_409_CONFLICT: {"description": "リソース競合エラー", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
@@ -846,7 +863,7 @@ async def delete_notification(
 
     try:
         service = get_notification_service(db)
-        service.delete_notification(notification_id=notification_id)
+        service.delete_notification(notification_id=notification_id, owner_id=credential.get("operator_id"))
 
         logger.info(
             "Notification deleted successfully",
@@ -912,13 +929,13 @@ async def delete_notification(
     "/notifications/{notification_id}/receive",
     response_model=NotifUpdateSuccessResponse,
     summary="通知確認状態更新API",
-    description="通知の確認状態を更新します（通知確認時に実行）。",
+    description="通知の確認状態を更新します（通知確認時に実行）。通知の受信者のみ実行できます。",
     responses={
         status.HTTP_200_OK: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（通知の受信者以外からの指定を含む）", "model": ErrorResponse},
         status.HTTP_409_CONFLICT: {"description": "リソース競合エラー", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
@@ -1017,13 +1034,13 @@ async def confirm_notification(
     "/notifications/{notification_id}/data/{data_id}/receive",
     response_model=DataUpdateSuccessResponse,
     summary="データ受領状態更新API",
-    description="データの受領状態を更新します（データ受領時に実行）。",
+    description="データの受領状態を更新します（データ受領時に実行）。通知の受信者のみ実行できます。",
     responses={
         status.HTTP_200_OK: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（通知の受信者以外からの指定を含む）", "model": ErrorResponse},
         status.HTTP_409_CONFLICT: {"description": "リソース競合エラー", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },

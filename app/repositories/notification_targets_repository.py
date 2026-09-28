@@ -10,13 +10,14 @@
 
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
+import uuid
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import (
     IntegrityError, 
     SQLAlchemyError,
     NoResultFound
 )
-from sqlalchemy import and_, or_, func, update as sa_update
+from sqlalchemy import and_, or_, func, select, update as sa_update
 
 # ログ設定のインポート
 from app.core.logging import get_logger, log_execution_time
@@ -31,7 +32,8 @@ from app.models.notifications_model import (
     NotificationConfirmed,
     NotificationDataConfirmed,
     NotificationStatus,
-    ConfirmationStatus
+    ConfirmationStatus,
+    notification_target_list_map,
 )
 
 from . import BaseRepository
@@ -177,7 +179,7 @@ class NotificationTargetListRepository(BaseRepository):
             # IN句を使って複数のリストから一度にメンバーを取得
             members = self.db.query(TargetIds.target_id).filter(
                 TargetIds.target_list_id.in_(target_list_ids)
-            ).distinct().all()  # ✅ distinct()で重複除去
+            ).distinct().all()  # distinct()で重複除去
             
             target_ids = [member[0] for member in members]
             
@@ -195,6 +197,43 @@ class NotificationTargetListRepository(BaseRepository):
             self._log_error(e, 'get_members_from_multiple_lists')
             raise
     
+    @log_execution_time(logger, 'debug')
+    def get_owned_ids(self, target_list_ids: List[Any], owner_id: Optional[str]) -> List[uuid.UUID]:
+        """指定した通知先リストIDのうち、所有者が owner_id のものを指定順・重複なしで返す"""
+        try:
+            if not target_list_ids or owner_id is None:
+                return []
+
+            requested = list(dict.fromkeys(
+                t if isinstance(t, uuid.UUID) else uuid.UUID(str(t)) for t in target_list_ids
+            ))
+            owned = {
+                row[0] for row in self.db.query(NotificationTargetList.target_list_id).filter(
+                    NotificationTargetList.target_list_id.in_(requested),
+                    NotificationTargetList.owner_id == owner_id
+                ).all()
+            }
+            return [t for t in requested if t in owned]
+
+        except SQLAlchemyError as e:
+            self._log_error(e, 'get_owned_target_list_ids')
+            raise
+
+    @log_execution_time(logger, 'debug')
+    def get_owned_by(
+        self,
+        target_list_id: str,
+        owner_id: Optional[str],
+        include_members: bool = True
+    ) -> Optional[NotificationTargetList]:
+        """所有者を指定して通知先リストを取得（他の所有者のリストはNone）"""
+        if owner_id is None:
+            return None
+        target_list = self.get_by_id(target_list_id, include_members)
+        if target_list is None or target_list.owner_id != owner_id:
+            return None
+        return target_list
+
     @log_execution_time(logger, 'debug')
     def get_by_id(
         self,
@@ -360,6 +399,7 @@ class NotificationTargetListRepository(BaseRepository):
     def update(
         self,
         target_list_id: str,
+        current_owner_id: Optional[str],
         expected_updated_at: datetime,
         name: Optional[str] = None,
         owner_id: Optional[str] = None,
@@ -370,19 +410,23 @@ class NotificationTargetListRepository(BaseRepository):
 
         Args:
             target_list_id: 通知先リストID
+            current_owner_id: 現在の所有者ID（APIを実行したoperator_id）
             expected_updated_at: クライアントが取得時に保持していた更新日時
             name: 新しいリスト名称
             owner_id: 新しい所有者ID
             target_ids: 新しい通知受信者IDリスト
 
         Returns:
-            更新された通知先リスト(存在しない、または更新日時が一致しない場合はNone)
+            更新された通知先リスト(存在しない、所有者が異なる、または更新日時が一致しない場合はNone)
         """
         try:
             logger.info(
                 "Updating notification target list",
                 extra={'target_list_id': target_list_id}
             )
+
+            if current_owner_id is None:
+                return None
 
             values = {'updated_at': datetime.utcnow()}
             if name is not None:
@@ -394,6 +438,7 @@ class NotificationTargetListRepository(BaseRepository):
                 sa_update(NotificationTargetList)
                 .where(
                     NotificationTargetList.target_list_id == target_list_id,
+                    NotificationTargetList.owner_id == current_owner_id,
                     NotificationTargetList.updated_at == expected_updated_at
                 )
                 .values(**values)
@@ -402,7 +447,7 @@ class NotificationTargetListRepository(BaseRepository):
 
             if result.rowcount == 0:
                 logger.warning(
-                    "Cannot update: notification target list not found or updated_at mismatch",
+                    "Cannot update: notification target list not found, not owned, or updated_at mismatch",
                     extra={'target_list_id': target_list_id}
                 )
                 return None
@@ -441,12 +486,13 @@ class NotificationTargetListRepository(BaseRepository):
             raise
     
     @log_execution_time(logger, 'debug')
-    def delete(self, target_list_id: str) -> bool:
+    def delete(self, target_list_id: str, owner_id: Optional[str]) -> bool:
         """
         通知先リストを削除(commitはService層で実施)
         
         Args:
             target_list_id: 通知先リストID
+            owner_id: 所有者ID（APIを実行したoperator_id）。所有者が異なるリストは削除しない
         
         Returns:
             削除対象が存在した場合True、存在しない場合False
@@ -457,15 +503,29 @@ class NotificationTargetListRepository(BaseRepository):
                 extra={'target_list_id': target_list_id}
             )
             
-            target_list = self.get_by_id(target_list_id)
+            target_list = self.get_owned_by(target_list_id, owner_id)
             
             if not target_list:
                 logger.warning(
-                    "Cannot delete: notification target list not found",
+                    "Cannot delete: notification target list not found or not owned",
                     extra={'target_list_id': target_list_id}
                 )
                 return False
             
+            # リストを指定した通知は target_list_ids が変わるため、通知の更新日時を更新する
+            # （所有者のない移行前の通知は owner_id の CHECK 制約で更新できないため、所有者の通知に限る）
+            self.db.execute(
+                sa_update(Notification)
+                .where(
+                    Notification.owner_id == target_list.owner_id,
+                    Notification.notification_id.in_(
+                        select(notification_target_list_map.c.notification_id)
+                        .where(notification_target_list_map.c.target_list_id == target_list.target_list_id)
+                    )
+                )
+                .values(updated_at=datetime.utcnow())
+                .execution_options(synchronize_session='fetch')
+            )
             self.db.delete(target_list)
             self.db.flush()
             
