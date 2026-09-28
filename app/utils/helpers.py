@@ -1,5 +1,6 @@
 """Helper Functions"""
 from datetime import datetime, timezone
+from email.utils import format_datetime
 from typing import Any, Dict
 import re
 
@@ -25,3 +26,10 @@ def to_naive_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def to_http_date(dt: datetime) -> str:
+    """Format datetime as HTTP-date"""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return format_datetime(dt.astimezone(timezone.utc), usegmt=True)

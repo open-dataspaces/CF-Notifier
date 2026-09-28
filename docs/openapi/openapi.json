@@ -500,6 +500,15 @@
               "type": "string",
               "title": "X-Notifier-API-Key"
             }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "前回取得時の ETag。現在の ETag と一致する場合は 304 Not Modified を返す",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -549,17 +558,57 @@
                 }
               },
               "ETag": {
-                "description": "リソースのバージョン識別子",
+                "description": "レスポンス内容のバージョン識別子（弱いETag）",
                 "schema": {
                   "type": "string",
-                  "example": "\"abc123etagvalue\""
+                  "example": "W/\"3f2a9c...e1b0\""
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "未更新（If-None-Match / If-Modified-Since の条件に一致。ボディなし）",
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
                 }
               },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
                 "schema": {
                   "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              },
+              "ETag": {
+                "description": "レスポンス内容のバージョン識別子（弱いETag）",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"3f2a9c...e1b0\""
                 }
               }
             }
@@ -608,20 +657,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -668,20 +703,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -730,20 +751,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -791,20 +798,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -851,20 +844,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -944,6 +923,24 @@
               "type": "string",
               "title": "X-Notifier-API-Key"
             }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "前回取得時の ETag。現在の ETag と一致する場合は 304 Not Modified を返す",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Modified-Since",
+            "in": "header",
+            "required": false,
+            "description": "前回取得時の Last-Modified。以降に更新がない場合は 304 Not Modified を返す（If-None-Match 指定時は無視）",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -993,10 +990,64 @@
                 }
               },
               "ETag": {
-                "description": "リソースのバージョン識別子",
+                "description": "レスポンス内容のバージョン識別子（弱いETag）",
                 "schema": {
                   "type": "string",
-                  "example": "\"abc123etagvalue\""
+                  "example": "W/\"3f2a9c...e1b0\""
+                }
+              },
+              "Last-Modified": {
+                "description": "リソースの最終更新日時",
+                "schema": {
+                  "type": "string",
+                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "未更新（If-None-Match / If-Modified-Since の条件に一致。ボディなし）",
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              },
+              "ETag": {
+                "description": "レスポンス内容のバージョン識別子（弱いETag）",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"3f2a9c...e1b0\""
                 }
               },
               "Last-Modified": {
@@ -1052,20 +1103,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -1112,20 +1149,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -1174,20 +1197,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -1234,20 +1243,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -1296,20 +1291,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -1356,20 +1337,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -2796,6 +2763,15 @@
               "type": "string",
               "title": "X-Notifier-API-Key"
             }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "前回取得時の ETag。現在の ETag と一致する場合は 304 Not Modified を返す",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2845,17 +2821,57 @@
                 }
               },
               "ETag": {
-                "description": "リソースのバージョン識別子",
+                "description": "レスポンス内容のバージョン識別子（弱いETag）",
                 "schema": {
                   "type": "string",
-                  "example": "\"abc123etagvalue\""
+                  "example": "W/\"3f2a9c...e1b0\""
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "未更新（If-None-Match / If-Modified-Since の条件に一致。ボディなし）",
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
                 }
               },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
                 "schema": {
                   "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              },
+              "ETag": {
+                "description": "レスポンス内容のバージョン識別子（弱いETag）",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"3f2a9c...e1b0\""
                 }
               }
             }
@@ -2904,20 +2920,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -2964,20 +2966,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -3026,20 +3014,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -3087,20 +3061,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -3147,20 +3107,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -4546,6 +4492,24 @@
               "type": "string",
               "title": "X-Notifier-API-Key"
             }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "前回取得時の ETag。現在の ETag と一致する場合は 304 Not Modified を返す",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Modified-Since",
+            "in": "header",
+            "required": false,
+            "description": "前回取得時の Last-Modified。以降に更新がない場合は 304 Not Modified を返す（If-None-Match 指定時は無視）",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4595,10 +4559,64 @@
                 }
               },
               "ETag": {
-                "description": "リソースのバージョン識別子",
+                "description": "レスポンス内容のバージョン識別子（弱いETag）",
                 "schema": {
                   "type": "string",
-                  "example": "\"abc123etagvalue\""
+                  "example": "W/\"3f2a9c...e1b0\""
+                }
+              },
+              "Last-Modified": {
+                "description": "リソースの最終更新日時",
+                "schema": {
+                  "type": "string",
+                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "未更新（If-None-Match / If-Modified-Since の条件に一致。ボディなし）",
+            "headers": {
+              "Cache-Control": {
+                "description": "キャッシュ制御指示",
+                "schema": {
+                  "type": "string",
+                  "example": "no-cache, no-store, must-revalidate"
+                }
+              },
+              "X-TrackingId": {
+                "description": "リクエストトラッキング用UUID",
+                "schema": {
+                  "type": "string",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              },
+              "Content-Security-Policy": {
+                "description": "XSS対策",
+                "schema": {
+                  "type": "string",
+                  "example": "default-src 'self'"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "MIMEスニッフィング防止",
+                "schema": {
+                  "type": "string",
+                  "example": "nosniff"
+                }
+              },
+              "Strict-Transport-Security": {
+                "description": "HTTPS強制",
+                "schema": {
+                  "type": "string",
+                  "example": "max-age=63072000; includeSubDomains"
+                }
+              },
+              "ETag": {
+                "description": "レスポンス内容のバージョン識別子（弱いETag）",
+                "schema": {
+                  "type": "string",
+                  "example": "W/\"3f2a9c...e1b0\""
                 }
               },
               "Last-Modified": {
@@ -4654,20 +4672,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -4714,20 +4718,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -4776,20 +4766,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -4836,20 +4812,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }
@@ -4898,20 +4860,6 @@
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
                 }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
-                }
               }
             }
           },
@@ -4958,20 +4906,6 @@
                 "schema": {
                   "type": "string",
                   "example": "max-age=63072000; includeSubDomains"
-                }
-              },
-              "ETag": {
-                "description": "リソースのバージョン識別子",
-                "schema": {
-                  "type": "string",
-                  "example": "\"abc123etagvalue\""
-                }
-              },
-              "Last-Modified": {
-                "description": "リソースの最終更新日時",
-                "schema": {
-                  "type": "string",
-                  "example": "Wed, 30 Jul 2025 01:00:00 GMT"
                 }
               }
             }

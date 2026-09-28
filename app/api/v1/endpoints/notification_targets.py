@@ -1,4 +1,5 @@
 """Notification Targets Endpoints"""
+from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
 
@@ -24,6 +25,7 @@ from app.schemas.notification_targets_schema import (
     NotificationTargetListResponse,
 )
 from app.services.notification_targets_service import get_notification_target_list_service
+from app.utils.helpers import to_http_date
 
 logger = get_logger(__name__)
 
@@ -246,6 +248,7 @@ async def list_notification_targets(
 )
 async def get_notification_target(
     target_list_id: UUID,
+    response: Response,
     headers: dict = Depends(verify_request_headers),
     credential: dict = Depends(verify_access_token),
     _: None = Depends(require_permission("notification-targets:get")),
@@ -279,6 +282,8 @@ async def get_notification_target(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Notification target list not found: {target_list_id}"
             )
+
+        response.headers["Last-Modified"] = to_http_date(datetime.fromisoformat(result["updated_at"]))
 
         logger.info(
             "Notification target retrieved successfully",

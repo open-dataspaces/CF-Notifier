@@ -31,6 +31,7 @@ from app.schemas.notifications_schema import (
     DataUpdateSuccessResponse,
     NotifUpdateSuccessResponse,
 )
+from app.utils.helpers import to_http_date
 from app.services.notifications_service import get_notification_service
 
 logger = get_logger(__name__)
@@ -600,6 +601,7 @@ async def list_notifications(
 )
 async def get_notification(
     notification_id: UUID,
+    response: Response,
     headers: dict = Depends(verify_request_headers),
     credential: dict = Depends(verify_access_token),
     _: None = Depends(require_permission("notifications:get-id")),
@@ -633,6 +635,12 @@ async def get_notification(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Notification not found: {notification_id}"
             )
+
+        response.headers["Last-Modified"] = to_http_date(max(
+            [result.updated_at]
+            + [c.updated_at for c in result.confirmations]
+            + [c.updated_at for c in result.data_confirmations]
+        ))
 
         logger.info(
             "Notification retrieved successfully",
