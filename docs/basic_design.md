@@ -79,6 +79,12 @@ graph TB
 * 認証は、L3 Identity ComponentのKeyCloakの認証機能を使用する。
 * NotifierAPIは、L2 Transactionを介して呼び出される。
 
+### 2.3 通知の配信方式
+
+* Notifierは **Pull型** で通知を配信する。
+* データ消費者のサービスアプリは、L2 Transactionを介して通知一覧取得API（`GET /api/v1/notifications`）を定期的に呼び出し（ポーリング）、自身宛の通知を取得する（3.3 参照）。
+* WebSocket、Server-Sent Events、Webhook等によるPush型の配信は提供しない。
+
 ---
 
 ## 3. シーケンス
