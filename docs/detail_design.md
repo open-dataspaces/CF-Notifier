@@ -349,8 +349,8 @@ CORE_L3-->>C_SA: IDトークン+アクセストークン
 %% --- Retrieve: 通知一覧取得 ---
 alt 通知一覧取得
   C->>C_SA: 通知一覧取得(定期的or任意のタイミング)
-  C_SA->>CORE_L2: GET /api/v1/notifications<BR>(アクセストークン)
-  CORE_L2->>DIST: GET /api/v1/notifications<BR>(アクセストークン)
+  C_SA->>CORE_L2: GET /api/v1/notifications<BR>(アクセストークン,If-None-Match ※任意)
+  CORE_L2->>DIST: GET /api/v1/notifications<BR>(アクセストークン,If-None-Match ※任意)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
   DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
@@ -358,8 +358,9 @@ alt 通知一覧取得
   DIST-->>DIST: アクセストークンからユーザID取得
   DIST->>DIST_DB2: ユーザIDに紐づく通知情報を取得(SELECT)
   DIST_DB2-->>DIST: 通知情報
-  DIST-->>CORE_L2: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,データID,通知受信者の詳細リスト,データ受信者の詳細リスト,通知登録日時、通知更新日時])
-  CORE_L2-->>C_SA: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,データID,通知受信者の詳細リスト,データ受信者の詳細リスト,通知登録日時、通知更新日時])
+  DIST-->>CORE_L2: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,データID,通知受信者の詳細リスト,データ受信者の詳細リスト,通知登録日時、通知更新日時])<BR>ETag
+  CORE_L2-->>C_SA: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,データID,通知受信者の詳細リスト,データ受信者の詳細リスト,通知登録日時、通知更新日時])<BR>ETag
+  Note over C_SA,DIST: If-None-Match が前回取得時の ETag と一致する場合は 304 Not Modified（ボディなし）を返す
 end
 
 ```
@@ -766,6 +767,29 @@ WHERE target_list_id = ? AND updated_at = ?;
   "instance": "/api/v1/notifications/550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+### 2.3 条件付きリクエスト仕様（ETag / Last-Modified）
+
+#### 基本方針
+取得API（GET）は ETag / Last-Modified による条件付きリクエスト（RFC 9110）に対応し、前回取得時から変更がない場合は 304 Not Modified（ボディなし）を返す。
+
+#### 対象APIと付与するヘッダ
+| API | ETag | Last-Modified |
+|-----|------|---------------|
+| GET /api/v1/notifications | ○ | - |
+| GET /api/v1/notifications/{notification_id} | ○ | ○（通知・通知確認状態・データ受領状態の`updated_at`のうち最新の値） |
+| GET /api/v1/notification-targets | ○ | - |
+| GET /api/v1/notification-targets/{target_list_id} | ○ | ○（通知先リストの`updated_at`） |
+
+#### 処理仕様
+- ETag: レスポンスボディ（圧縮前）のSHA-256ハッシュ値から生成する弱いETag（`W/"<ハッシュ値>"`）。ConditionalRequestMiddleware で付与する
+- Last-Modified: HTTP-date形式（秒単位、GMT）。各取得APIで付与する
+- 304を返す条件（RFC 9110 13.2.2 の評価順）
+  1. If-None-Match がある場合: ETagと弱い比較で一致する（または`*`）場合は304、一致しない場合は200（If-Modified-Since は評価しない）
+  2. If-None-Match がなく If-Modified-Since がある場合: Last-Modified が If-Modified-Since 以前の場合は304
+  3. いずれもない場合は200
+- 304応答はボディを含まず、ETag / Last-Modified / Cache-Control / X-TrackingId 等のヘッダを含む
+- GET以外のメソッド、200以外の応答には付与しない
 
 ## 3. ログ設計
 

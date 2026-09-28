@@ -39,7 +39,7 @@ def create_database_engine():
     engine = create_engine(
         settings.DATABASE_URL,
         pool_timeout=settings.DB_POOL_TIMEOUT,
-        connect_args={"connect_timeout": settings.DB_CONNECT_TIMEOUT},
+        connect_args={"connect_timeout": settings.DB_CONNECT_TIMEOUT, "options": "-c timezone=UTC"},
     )
     
     logger.info(

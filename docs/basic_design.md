@@ -344,6 +344,7 @@ end
   - Content-Type: `application/json; charset=utf-8`
   - エラーレスポンス: RFC 9457 準拠
 * **日時フォーマット**: ISO 8601。レスポンスの日時は UTC で、タイムゾーン表記なし・マイクロ秒まで出力する
+* **条件付きリクエスト**: 取得API（GET）は ETag / Last-Modified ヘッダを返却し、If-None-Match / If-Modified-Since の条件に一致する場合は 304 Not Modified（ボディなし）を返す（詳細は詳細設計 2.3 参照）
 * **排他制御**: 更新API（PUT）は、取得時の更新日時（`updated_at`）を、取得した値のままリクエストボディに必須で指定する。最新の更新日時と一致しない場合は 409 Conflict を返す（楽観的排他制御、詳細は詳細設計 2.2 参照）
 
 
