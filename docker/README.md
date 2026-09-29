@@ -155,20 +155,21 @@ docker compose up --build
 
 | 変数名 | デフォルト値 | 説明 |
 |---|---|---|
-| `L3_BASE_URL` | `https://dev-auth.example.com` | L3 認証サーバー URL |
+| `L3_BASE_URL` | `https://dev-auth.example.com` | L3 の URL（トークン検証・認可判定 API の接続先） |
 | `L3_INTROSPECT_ENDPOINT` | `/auth/token/introspect` | トークン検証エンドポイント |
 | `L3_API_KEY` | `dev-l3-api-key` | L3 API キー |
 | `L3_CLIENT_ID` | `dev-client-id` | L3 クライアント ID |
 | `L3_CLIENT_SECRET` | `dev-client-secret` | L3 クライアントシークレット |
 
-### 認可サービス設定（OpenFGA）(独自に認可を構築した場合のみ)
+### 認可サービス設定（L3 認可判定API）
 
 | 変数名 | デフォルト値 | 説明 |
 |---|---|---|
 | `AUTHZ_ENABLED` | `false` | 認可チェック有効/無効 |
-| `AUTHZ_BASE_URL` | `http://openfga:8080` | OpenFGA サーバー URL |
-| `AUTHZ_OPENFGA_STORE_ID` | `01KFY9RF3HQM...` | ストア ID |
-| `AUTHZ_OPENFGA_MODEL_ID` | `01KFY9RF3YQ9...` | モデル ID |
+| `AUTHZ_STORE_ID` | `01KFY9RF3HQM...` | Notifier の API 実行権限を登録した L3 の認可ストア ID |
+| `L3_AUTHZ_EVALUATION_ENDPOINT` | `/authz/stores/{store_id}/access/v1/evaluation` | L3 の認可判定 API（AuthZEN）のパス |
+
+認可確認は L3 の認可判定 API を経由して行います（接続先・API キーは `L3_BASE_URL`・`L3_API_KEY` を使用）。`L3_API_KEY` のレルムが、`AUTHZ_STORE_ID` の認可ストアに紐付けられている必要があります。
 
 ### データベース設定
 
@@ -197,12 +198,12 @@ docker compose up --build
 
 ## ODS スタック統合
 
-ODS スタックの他サービス（OpenFGA 等）と連携して動かす場合の手順です。
+ODS スタックの他サービス（L3 等）と連携して動かす場合の手順です。
 
 ### 共有ネットワークへの参加
 
 `docker-compose.yml` の default ネットワークは共有ネットワーク（デフォルト名: `shared-network`）に接続されます。
-同一ネットワークに参加している他サービスとは、コンテナ名で相互通信できます（例: `http://openfga:8080`）。
+同一ネットワークに参加している他サービスとは、コンテナ名で相互通信できます。
 
 ネットワーク名は `SHARED_NETWORK_NAME` で変更できます。スタック側が `shared-network-ods` を使用している場合:
 
@@ -247,7 +248,7 @@ PostgreSQL (5432) とは競合しません。デバッグ等でホスト公開�
 
 ## 外部サービスとの連携
 
-### OpenFGA 認可サービス
+### L3 認可判定 API
 
 notifier では認可チェック（`AUTHZ_ENABLED: false`）がデフォルトで無効です。
 

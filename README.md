@@ -40,7 +40,7 @@
 │   ├── services/                 # ビジネスロジック層
 │   ├── clients/                  # 外部サービスHTTPクライアント
 │   │   ├── l3_client.py          # L3認証クライアント
-│   │   └── authz_client.py       # OpenFGA認可クライアント
+│   │   └── authz_client.py       # L3認可クライアント
 │   ├── core/                     # コア機能
 │   │   ├── config.py             # 環境変数ベースの設定
 │   │   ├── security.py           # 認証・認可ユーティリティ

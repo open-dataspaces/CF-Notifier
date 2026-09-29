@@ -50,8 +50,10 @@ alt 通知先リスト作成
   CORE_L2->>DIST: POST /api/v1/notification-targets<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB1: 通知先リスト登録(INSERT ※リスト所有者IDがoperator_idと一致する場合のみ。異なる場合は403)
   DIST_DB1-->>DIST: 作成結果
   DIST-->>CORE_L2: 201 Created<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
@@ -65,8 +67,10 @@ alt 通知先リスト更新
   CORE_L2->>DIST: PUT /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB1: 通知先リスト情報を更新(UPDATE ※所有者のみ、更新日時が一致する場合のみ)
   DIST_DB1-->>DIST: 更新結果
   Note over DIST: 更新件数0件（更新日時の不一致）の場合は 409 Conflict
@@ -81,8 +85,10 @@ alt 通知先リスト取得
   CORE_L2->>DIST: GET /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB1: 指定したIDの通知先リストを取得(SELECT ※所有者のみ)
   DIST_DB1-->>DIST: 指定した通知先リスト情報
   DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
@@ -96,8 +102,10 @@ alt 通知先リスト削除
   CORE_L2->>DIST: DELETE /api/v1/notification-targets/{通知先リストID}<BR>(アクセストークン)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB1: 指定した通知先リストを削除(DELETE ※所有者のみ)
   DIST->>DIST_DB2: 削除したリストを指定した通知の更新日時を更新(UPDATE)
   DIST_DB1-->>DIST: 削除結果
@@ -112,8 +120,10 @@ alt 通知先リスト一覧取得
   CORE_L2->>DIST: GET /api/v1/notification-targets<BR>(アクセストークン)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB1: 所有者がoperator_idの通知先リストを取得(SELECT)
   DIST_DB1-->>DIST: 通知先リスト一覧
   DIST-->>CORE_L2: 200 OK<BR>(通知先リストID,通知先リスト名,リスト所有者ID,通知受信者IDリスト,更新日時)
@@ -169,8 +179,10 @@ alt 通知情報登録
   CORE_L2->>DIST: POST /api/v1/notifications <BR>(アクセストークン,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 通知情報登録(INSERT ※所有者=operator_id。通知先リストは自分が所有するもののみ)
   DIST_DB2-->>DIST: 登録結果
   DIST-->>CORE_L2: 201 Created<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
@@ -184,8 +196,10 @@ alt 通知情報更新
   CORE_L2->>DIST: PUT /api/v1/notifications/{通知ID}<BR>(通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,更新日時)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 指定した通知情報更新(UPDATE ※所有者のみ、更新日時が一致する場合のみ)
   DIST_DB2-->>DIST: 更新結果
   Note over DIST: 更新件数0件（更新日時の不一致）の場合は 409 Conflict
@@ -200,8 +214,10 @@ alt 通知情報取得
   CORE_L2->>DIST: GET /api/v1/notifications/{通知ID}
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 指定した通知詳細取得(GET ※所有者・受信者のみ。受信者には自分の確認状態のみ返す)
   DIST_DB2-->>DIST: 取得結果
   DIST-->>CORE_L2: 200 OK<BR>(通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時)
@@ -215,8 +231,10 @@ alt 通知情報削除
   CORE_L2->>DIST: DELETE /api/v1/notifications/{通知ID}
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 指定した通知情報削除(DELETE ※所有者のみ)
   DIST_DB2-->>DIST: 削除結果
   DIST-->>CORE_L2: 204 No Content
@@ -265,8 +283,10 @@ alt 通知情報一括登録
   CORE_L2->>DIST: POST /api/v1/notifications/bulk<BR>(アクセストークン,[通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID]のリスト)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 通知登録APIと同じエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 通知登録APIと同じエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 通知情報登録(INSERT ※所有者=operator_id)を件数分実行（1トランザクション）
   DIST_DB2-->>DIST: 登録結果
   Note over DIST,DIST_DB2: 1件でも失敗した場合は全件ロールバックし、エラーを返す
@@ -281,8 +301,10 @@ alt 通知情報一括更新
   CORE_L2->>DIST: PUT /api/v1/notifications/bulk<BR>(アクセストークン,[通知ID,ステータス,通知タイトル,通知内容,更新日時]のリスト)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 通知更新APIと同じエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 通知更新APIと同じエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 通知情報更新(UPDATE ※所有者のみ、更新日時が一致する場合のみ)を通知ID順に件数分実行（1トランザクション）
   DIST_DB2-->>DIST: 更新結果
   Note over DIST,DIST_DB2: 1件でも失敗（更新日時の不一致を含む）した場合は全件ロールバックし、エラーを返す
@@ -297,8 +319,10 @@ alt 通知情報一括削除
   CORE_L2->>DIST: POST /api/v1/notifications/bulk-delete<BR>(アクセストークン,通知IDのリスト)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 通知削除APIと同じエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 通知削除APIと同じエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 通知情報削除(DELETE ※所有者のみ)を通知ID順に件数分実行（1トランザクション）
   DIST_DB2-->>DIST: 削除結果
   Note over DIST,DIST_DB2: 1件でも失敗した場合は全件ロールバックし、エラーを返す
@@ -354,8 +378,10 @@ alt 通知一覧取得
   CORE_L2->>DIST: GET /api/v1/notifications<BR>(アクセストークン,If-None-Match ※任意)
   DIST->>CORE_L3: アクセストークン検証
   CORE_L3-->>DIST: OK
-  DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-  FGA-->>DIST: 認可結果 (allowed)
+  DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+  CORE_L3->>FGA: 認可判定
+  FGA-->>CORE_L3: 判定結果
+  CORE_L3-->>DIST: 認可結果 (decision)
   DIST-->>DIST: アクセストークンからユーザID取得
   DIST->>DIST_DB2: ユーザIDが受信者（登録時点で確定）である通知情報を取得(SELECT)
   DIST_DB2-->>DIST: 通知情報
@@ -415,8 +441,10 @@ CORE_L2->>DIST:　PUT /api/v1/notifications/{通知ID}/receive<BR>(アクセス�
 
 DIST->>CORE_L3: アクセストークン検証
 CORE_L3-->>DIST: OK
-DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-FGA-->>DIST: 認可結果 (allowed)
+DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+CORE_L3->>FGA: 認可判定
+FGA-->>CORE_L3: 判定結果
+CORE_L3-->>DIST: 認可結果 (decision)
 DIST->>DIST: アクセストークンから通知先ユーザIDを取得
 DIST->>DIST_DB2:  指定した通知IDの通知確認済み​受信者​リストのステータスを受信済みに更新​(UPDATE ※受信者のみ)
 DIST_DB2-->>DIST: 更新結果
@@ -473,8 +501,10 @@ CORE_L2->>DIST:　PUT /api/v1/notifications/{通知ID}/data/{データID}/receiv
 
 DIST->>CORE_L3: アクセストークン検証
 CORE_L3-->>DIST: OK
-DIST->>FGA: 認可確認 (Check API: operator_id, 対象APIエンドポイント)
-FGA-->>DIST: 認可結果 (allowed)
+DIST->>CORE_L3: 認可判定 (AuthZEN Evaluation API: operator_id, 対象APIエンドポイント)
+CORE_L3->>FGA: 認可判定
+FGA-->>CORE_L3: 判定結果
+CORE_L3-->>DIST: 認可結果 (decision)
 DIST->>DIST: アクセストークンから通知先ユーザIDを取得
 DIST->>DIST_DB2: 指定した通知ID・データIDのデータ受領状態を受領済みに更新(UPDATE ※受信者のみ)
 DIST_DB2-->>DIST: 更新結果
