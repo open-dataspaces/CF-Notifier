@@ -148,7 +148,7 @@ docker compose up --build
 | 変数名 | デフォルト値 | 説明 |
 |---|---|---|
 | `SECRET_KEY` | `dev-only-secret-key-...` | JWT署名キー（本番では必ず変更） |
-| `CORS_ORIGINS` | `http://localhost:3000` | CORS許可オリジン |
+| `ALLOWED_HOSTS` | `http://localhost:3000` | CORS許可オリジン（カンマ区切りまたは JSON 配列） |
 | `X_NOTIFICATION_API_KEY` | `dev-notification-api-key` | API キー |
 
 ### L3 認証設定
@@ -251,21 +251,6 @@ PostgreSQL (5432) とは競合しません。デバッグ等でホスト公開�
 ### L3 認可判定 API
 
 notifier では認可チェック（`AUTHZ_ENABLED: false`）がデフォルトで無効です。
-
----
-
-## テスト実行
-
-```bash
-# プロジェクトルートから実行
-
-# unit テストのみ（DB不要）
-docker compose -f docker/docker-compose.yml exec app pytest test/unit -v
-
-# 開発用イメージでテスト実行
-docker build -f docker/Dockerfile.dev -t notifier-api:dev .
-docker run --rm notifier-api:dev pytest test/unit -v --cov=app --cov-report=term-missing
-```
 
 ---
 
