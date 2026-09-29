@@ -1,7 +1,6 @@
 """Common Dependencies"""
 import re
 from uuid import UUID, uuid4
-from typing import Literal
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -92,7 +91,7 @@ async def verify_request_headers(
     user_agent: str = Header(..., min_length=1, alias="User-Agent"),
     x_tracking_id: str = Header(..., min_length=1, alias="X-TrackingId"),
     accept_language: str = Header(..., min_length=1, alias="Accept-Language"),
-    content_type: Literal["application/json"] = Header(..., alias="Content-Type"),
+    content_type: str = Header(..., alias="Content-Type", pattern=r"^application/json\s*(;.*)?$"),
     x_notification_api_key: str = Header(..., alias="X-Notifier-API-Key", title="X-Notifier-API-Key")
 ):
     

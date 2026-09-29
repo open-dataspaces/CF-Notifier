@@ -133,7 +133,8 @@ def add_exception_handlers(app: FastAPI):
                 "detail": exc.detail,
                 "status": exc.status_code,
                 "instance": request.url.path
-            }
+            },
+            headers=getattr(exc, "headers", None),
         )
     
     @app.exception_handler(SQLAlchemyError)

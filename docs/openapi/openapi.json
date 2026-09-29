@@ -55,8 +55,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -487,8 +487,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -910,8 +910,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -1401,8 +1401,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -1863,8 +1863,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -2300,8 +2300,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -2677,7 +2677,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/components/schemas/NotifStatus"
                 },
                 {
                   "type": "null"
@@ -2750,8 +2750,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -3163,8 +3163,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -3615,8 +3615,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -4069,8 +4069,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -4479,8 +4479,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -4970,8 +4970,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -5432,8 +5432,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -5879,8 +5879,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },
@@ -6343,8 +6343,8 @@
             "in": "header",
             "required": true,
             "schema": {
-              "const": "application/json",
               "type": "string",
+              "pattern": "^application/json\\s*(;.*)?$",
               "title": "Content-Type"
             }
           },

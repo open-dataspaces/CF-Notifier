@@ -1,6 +1,7 @@
 """Application Configuration"""
-from typing import List, Literal
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import json
+from typing import Annotated, List, Literal
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from pydantic import computed_field, field_validator
 
 
@@ -80,7 +81,7 @@ class Settings(BaseSettings):
     # ===========================================
     # CORS (本番環境では具体的なオリジンを指定すること)
     # ===========================================
-    ALLOWED_HOSTS: List[str] = []
+    ALLOWED_HOSTS: Annotated[List[str], NoDecode] = []
 
     @field_validator('SECRET_KEY')
     @classmethod
@@ -92,11 +93,14 @@ class Settings(BaseSettings):
     @field_validator('ALLOWED_HOSTS', mode='before')
     @classmethod
     def parse_allowed_hosts(cls, v):
-        """CORS_ORIGINSをパース（カンマ区切り文字列またはリスト）"""
+        """ALLOWED_HOSTSをパース（カンマ区切り文字列・JSON 配列・リスト）"""
         if isinstance(v, str):
+            v = v.strip()
             if not v:
                 return []
-            return [host.strip() for host in v.split(',')]
+            if v.startswith('['):
+                return json.loads(v)
+            return [host.strip() for host in v.split(',') if host.strip()]
         return v
     
     # ===========================================

@@ -27,6 +27,7 @@ from app.schemas.notifications_schema import (
     NotificationBulkUpdateRequest,
     NotificationBulkUpdateResponse,
     NotificationBulkDeleteRequest,
+    NotifStatus,
     SelfNotificationListResponse,
     DataUpdateSuccessResponse,
     NotifUpdateSuccessResponse,
@@ -508,7 +509,7 @@ async def bulk_delete_notifications(
 )
 async def list_notifications(
     response: Response,
-    notification_status: Optional[str] = Query(None, alias="status", description="通知ステータスでフィルタ"),
+    notification_status: Optional[NotifStatus] = Query(None, alias="status", description="通知ステータスでフィルタ"),
     skip: int = Query(0, ge=0, description="スキップ件数"),
     limit: int = Query(100, ge=1, le=1000, description="取得件数上限"),
     headers: dict = Depends(verify_request_headers),
@@ -527,7 +528,7 @@ async def list_notifications(
         endpoint="/api/v1/notifications",
         method="GET",
         user_id=user_id,
-        status_filter=notification_status,
+        status_filter=notification_status.value if notification_status else None,
         skip=skip,
         limit=limit
     )
@@ -536,7 +537,7 @@ async def list_notifications(
         service = get_notification_service(db)
         notifications = service.get_user_notifications(
             user_id=user_id,
-            status=notification_status,
+            status=notification_status.value if notification_status else None,
             skip=skip,
             limit=limit
         )
