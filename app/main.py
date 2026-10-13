@@ -10,13 +10,21 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.v1.router import api_router
 from app.api.v1.endpoints import health
-from app.api.v1.response_headers import COMMON_RESPONSE_HEADERS, GET_RESPONSE_HEADERS
+from app.api.v1.response_headers import (
+    COMMON_RESPONSE_HEADERS,
+    GET_RESPONSE_HEADERS,
+    GET_RESOURCE_RESPONSE_HEADERS,
+    GET_REQUEST_PARAMETERS,
+    GET_RESOURCE_REQUEST_PARAMETERS,
+    NOT_MODIFIED_RESPONSE,
+)
 from app.core.config import settings
 from app.core.events import create_start_app_handler, create_stop_app_handler
 from app.middleware import (
     TrackingMiddleware,
     ContentTypeMiddleware,
     CommonSecurityHeadersMiddleware,
+    ConditionalRequestMiddleware,
     add_exception_handlers,
 )
 
@@ -58,6 +66,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
+app.add_middleware(ConditionalRequestMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(CommonSecurityHeadersMiddleware)
 app.add_middleware(ContentTypeMiddleware)
@@ -108,6 +117,22 @@ def custom_openapi():
     for path, path_item in paths.items():
         for method, operation in path_item.items():
             if method in ["get", "post", "put", "delete", "patch"]:
+                # 個別リソース取得（パスパラメータあり）のみLast-Modified/If-Modified-Sinceに対応
+                is_resource_get = method == "get" and "{" in path
+                if method == "get":
+                    get_headers = dict(GET_RESPONSE_HEADERS)
+                    request_parameters = list(GET_REQUEST_PARAMETERS)
+                    if is_resource_get:
+                        get_headers.update(GET_RESOURCE_RESPONSE_HEADERS)
+                        request_parameters += GET_RESOURCE_REQUEST_PARAMETERS
+                    operation["parameters"] = operation.get("parameters", []) + request_parameters
+                    # 304レスポンスを200の直後に追加
+                    operation["responses"] = {
+                        **{k: v for k, v in operation["responses"].items() if k == "200"},
+                        "304": dict(NOT_MODIFIED_RESPONSE),
+                        **{k: v for k, v in operation["responses"].items() if k != "200"},
+                    }
+
                 responses = operation.get("responses", {})
                 for status_code, response in responses.items():
                     # 既存のheadersを取得、なければ空dictを作成
@@ -116,9 +141,9 @@ def custom_openapi():
                     for header_name, header_def in COMMON_RESPONSE_HEADERS.items():
                         if header_name not in headers:
                             headers[header_name] = header_def
-                    # GETメソッドのみETag/Last-Modifiedを追加
-                    if method == "get":
-                        for header_name, header_def in GET_RESPONSE_HEADERS.items():
+                    # GETの200/304レスポンスのみETag/Last-Modifiedを追加
+                    if method == "get" and status_code in ("200", "304"):
+                        for header_name, header_def in get_headers.items():
                             if header_name not in headers:
                                 headers[header_name] = header_def
                     response["headers"] = headers

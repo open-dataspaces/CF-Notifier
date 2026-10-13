@@ -1,6 +1,7 @@
 """Application Configuration"""
-from typing import List, Literal
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import json
+from typing import Annotated, List, Literal
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from pydantic import computed_field, field_validator
 
 
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
     # L3 ACCESS (環境変数から取得 - デフォルト値なし)
     L3_BASE_URL: str = ""
     L3_INTROSPECT_ENDPOINT: str = "/auth/token/introspect"
+    L3_AUTHZ_EVALUATION_ENDPOINT: str = "/authz/stores/{store_id}/access/v1/evaluation"
     L3_API_KEY: str = ""
     L3_CLIENT_ID: str = ""
     L3_CLIENT_SECRET: str = ""
@@ -59,9 +61,7 @@ class Settings(BaseSettings):
     # 認可サービス設定
     # ===========================================
     AUTHZ_ENABLED: bool = False
-    AUTHZ_BASE_URL: str = ""
-    AUTHZ_OPENFGA_STORE_ID: str = ""
-    AUTHZ_OPENFGA_MODEL_ID: str = ""
+    AUTHZ_STORE_ID: str = ""  # Notifier のAPI実行権限を登録した L3 の認可ストアID
 
     # ===========================================
     # Application
@@ -81,7 +81,7 @@ class Settings(BaseSettings):
     # ===========================================
     # CORS (本番環境では具体的なオリジンを指定すること)
     # ===========================================
-    ALLOWED_HOSTS: List[str] = []
+    ALLOWED_HOSTS: Annotated[List[str], NoDecode] = []
 
     @field_validator('SECRET_KEY')
     @classmethod
@@ -93,11 +93,14 @@ class Settings(BaseSettings):
     @field_validator('ALLOWED_HOSTS', mode='before')
     @classmethod
     def parse_allowed_hosts(cls, v):
-        """CORS_ORIGINSをパース（カンマ区切り文字列またはリスト）"""
+        """ALLOWED_HOSTSをパース（カンマ区切り文字列・JSON 配列・リスト）"""
         if isinstance(v, str):
+            v = v.strip()
             if not v:
                 return []
-            return [host.strip() for host in v.split(',')]
+            if v.startswith('['):
+                return json.loads(v)
+            return [host.strip() for host in v.split(',') if host.strip()]
         return v
     
     # ===========================================

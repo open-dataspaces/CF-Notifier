@@ -36,7 +36,7 @@ services:
       # ===========================================
       SECRET_KEY: ${SECRET_KEY:-dev-only-secret-key-change-in-production}
       # CORS: 開発環境のみ * を許可、本番では具体的なオリジンを指定
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-http://localhost:3000}
 
       # ===========================================
       # API Keys（開発用 - 環境変数で上書き可能）
@@ -61,9 +61,8 @@ services:
       # 認可サービス設定
       # ===========================================
       AUTHZ_ENABLED: "false"
-      AUTHZ_BASE_URL: ${AUTHZ_BASE_URL:-http://openfga:8080}
-      AUTHZ_OPENFGA_STORE_ID: ${AUTHZ_OPENFGA_STORE_ID:-01KFY9RF3HQM123HVZ47EJTYP8}
-      AUTHZ_OPENFGA_MODEL_ID: ${AUTHZ_OPENFGA_MODEL_ID:-01KFY9RF3YQ9EF8GZEYBKPAWH0}
+      AUTHZ_STORE_ID: ${AUTHZ_STORE_ID:-01KFY9RF3HQM123HVZ47EJTYP8}
+      L3_AUTHZ_EVALUATION_ENDPOINT: /authz/stores/{store_id}/access/v1/evaluation
 
       # ===========================================
       # データベース設定（ローカルDocker用）

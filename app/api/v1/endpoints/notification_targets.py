@@ -1,4 +1,5 @@
 """Notification Targets Endpoints"""
+from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
 
@@ -13,7 +14,7 @@ from app.core.custom_exceptions import (
     DatabaseError,
 )
 from app.core.logging import get_logger, set_request_id
-from app.core.security import verify_access_token, verify_request_headers
+from app.core.security import verify_access_token, verify_request_headers, verify_operator_id
 from app.core.security import require_permission
 from app.db.session import get_db
 from app.schemas.common import ErrorResponse
@@ -24,6 +25,7 @@ from app.schemas.notification_targets_schema import (
     NotificationTargetListResponse,
 )
 from app.services.notification_targets_service import get_notification_target_list_service
+from app.utils.helpers import to_http_date
 
 logger = get_logger(__name__)
 
@@ -38,7 +40,7 @@ router = APIRouter()
     response_model=NotificationTargetResponse,
     status_code=status.HTTP_201_CREATED,
     summary="通知先リスト作成API",
-    description="通知先リストを新規作成します。",
+    description="通知先リストを新規作成します。owner_id にはアクセストークンの operator_id を指定します（異なる場合は 403）。",
     responses={
         status.HTTP_201_CREATED: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
@@ -58,6 +60,8 @@ async def create_notification_target(
     """通知先リストを作成"""
     request_id = headers.get('x_tracking_id') or str(uuid4())
     set_request_id(request_id)
+
+    verify_operator_id(request.owner_id, credential, "Owner ID")
 
     logger.info(
         "Received create notification target request",
@@ -234,18 +238,19 @@ async def list_notification_targets(
     "/notification-targets/{target_list_id}",
     response_model=NotificationTargetResponse,
     summary="通知先リスト取得API",
-    description="指定した通知先リストを取得します。",
+    description="指定した通知先リストを取得します。リストの所有者のみ取得できます。",
     responses={
         status.HTTP_200_OK: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（他の提供者のリストを含む）", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
 )
 async def get_notification_target(
     target_list_id: UUID,
+    response: Response,
     headers: dict = Depends(verify_request_headers),
     credential: dict = Depends(verify_access_token),
     _: None = Depends(require_permission("notification-targets:get")),
@@ -266,6 +271,7 @@ async def get_notification_target(
         service = get_notification_target_list_service(db)
         result = service.get_target_list(
             target_list_id=target_list_id,
+            owner_id=credential.get("operator_id"),
             include_members=True
         )
 
@@ -279,6 +285,8 @@ async def get_notification_target(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Notification target list not found: {target_list_id}"
             )
+
+        response.headers["Last-Modified"] = to_http_date(datetime.fromisoformat(result["updated_at"]))
 
         logger.info(
             "Notification target retrieved successfully",
@@ -342,14 +350,14 @@ async def get_notification_target(
     "/notification-targets/{target_list_id}",
     response_model=NotificationTargetResponse,
     summary="通知先リスト更新API",
-    description="指定した通知先リストを更新します。",
+    description="指定した通知先リストを更新します。リストの所有者のみ更新できます。owner_id にはアクセストークンの operator_id を指定します（異なる場合は 403）。",
     responses={
         status.HTTP_200_OK: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
-        status.HTTP_409_CONFLICT: {"description": "リソース競合エラー", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（他の提供者のリストを含む）", "model": ErrorResponse},
+        status.HTTP_409_CONFLICT: {"description": "リソース競合エラー（updated_at が最新でない場合を含む）", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
 )
@@ -365,6 +373,8 @@ async def update_notification_target(
     request_id = headers.get('x_tracking_id') or str(uuid4())
     set_request_id(request_id)
 
+    verify_operator_id(request.owner_id, credential, "Owner ID")
+
     logger.info(
         "Received update notification target request",
         endpoint=f"/api/v1/notification-targets/{target_list_id}",
@@ -379,6 +389,8 @@ async def update_notification_target(
         service = get_notification_target_list_service(db)
         result = service.update_target_list(
             target_list_id=target_list_id,
+            operator_id=credential.get("operator_id"),
+            expected_updated_at=request.updated_at,
             name=request.name,
             owner_id=request.owner_id,
             target_ids=request.target_ids
@@ -455,13 +467,13 @@ async def update_notification_target(
     "/notification-targets/{target_list_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="通知先リスト削除API",
-    description="指定した通知先リストを削除します。",
+    description="指定した通知先リストを削除します。リストの所有者のみ削除できます。",
     responses={
         status.HTTP_204_NO_CONTENT: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"description": "認証エラー", "model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"description": "認可エラー", "model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"description": "該当データなし", "model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"description": "該当データなし（他の提供者のリストを含む）", "model": ErrorResponse},
         status.HTTP_409_CONFLICT: {"description": "リソース競合エラー", "model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "サーバエラー", "model": ErrorResponse},
     },
@@ -486,7 +498,7 @@ async def delete_notification_target(
 
     try:
         service = get_notification_target_list_service(db)
-        service.delete_target_list(target_list_id=target_list_id)
+        service.delete_target_list(target_list_id=target_list_id, owner_id=credential.get("operator_id"))
 
         logger.info(
             "Notification target deleted successfully",

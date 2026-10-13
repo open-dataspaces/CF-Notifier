@@ -24,7 +24,7 @@
 * 認証機能は、アイデンティティレイヤ（L3）との連携を前提とするため、本システムの対象外
 * 通信は **TLS** 前提（外部のプロキシ／ロードバランサーで終端、API→DB間も TLS）。
 * TLS終端は、本ソフトウェアの外部で行うため対象外
-* 認可ポリシーは OpenFGAを使用し管理
+* 認可ポリシーは L3 Identity Componentの認可機能（OpenFGA）で管理し、認可判定は L3 の認可判定APIを経由して行う
 
 ---
 
@@ -78,6 +78,12 @@ graph TB
 * NotifierDBは、PostgreSQLとして動作し、Notifierの通知先リスト、通知情報を保持する
 * 認証は、L3 Identity ComponentのKeyCloakの認証機能を使用する。
 * NotifierAPIは、L2 Transactionを介して呼び出される。
+
+### 2.3 通知の配信方式
+
+* Notifierは **Pull型** で通知を配信する。
+* データ消費者のサービスアプリは、L2 Transactionを介して通知一覧取得API（`GET /api/v1/notifications`）を定期的に呼び出し（ポーリング）、自身宛の通知を取得する（3.3 参照）。
+* WebSocket、Server-Sent Events、Webhook等によるPush型の配信は提供しない。
 
 ---
 
@@ -343,7 +349,9 @@ end
 * **レスポンス形式**: 
   - Content-Type: `application/json; charset=utf-8`
   - エラーレスポンス: RFC 9457 準拠
-* **日時フォーマット**: ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
+* **日時フォーマット**: ISO 8601。レスポンスの日時は UTC で、タイムゾーン表記なし・マイクロ秒まで出力する
+* **条件付きリクエスト**: 取得API（GET）は ETag / Last-Modified ヘッダを返却し、If-None-Match / If-Modified-Since の条件に一致する場合は 304 Not Modified（ボディなし）を返す（詳細は詳細設計 2.3 参照）
+* **排他制御**: 更新API（PUT）は、取得時の更新日時（`updated_at`）を、取得した値のままリクエストボディに必須で指定する。最新の更新日時と一致しない場合は 409 Conflict を返す（楽観的排他制御、詳細は詳細設計 2.2 参照）
 
 
 ### 4.2 REST API エンドポイント
@@ -362,6 +370,9 @@ end
 | DELETE    | `/api/v1/notifications/{notification_id}`        | 通知削除            |
 | PUT    | `/api/v1/notifications/{notification_id}/receive`        | 通知確認状態更新            |
 | PUT    | `/api/v1/notifications/{notification_id}/data/{data_id}/receive`        | データ受領状態更新           |
+| POST    | `/api/v1/notifications/bulk`        | 通知一括登録            |
+| PUT    | `/api/v1/notifications/bulk`        | 通知一括更新            |
+| POST    | `/api/v1/notifications/bulk-delete`        | 通知一括削除            |
 
 ### 4.3 エラーレスポンス
 
@@ -389,6 +400,18 @@ end
 }
 ```
 
+### 4.4 一括処理API
+
+* 複数の通知を1リクエストで登録・更新・削除する。
+* 1リクエストあたり1～100件を指定できる。範囲外の場合は 422 を返す。
+* 全件を1トランザクションで処理し、1件でも失敗した場合は全件をロールバックしてエラーを返す。
+  * 入力値エラー（400）の detail には、失敗した要素の位置（例: `notifications[1]`）を含める。
+* 各要素の項目・チェック内容は、対応する単件APIと同じとする。一括更新APIでは、要素ごとに `notification_id` と `updated_at` を指定する。
+* 一括更新・一括削除で同じ通知IDを重複して指定した場合は 422 を返す。
+* レスポンスの並び順はリクエストと同じとする。
+* 認可は対応する単件APIと同じ権限で判定する（一括登録: `notifications:post`、一括更新: `notifications:put`、一括削除: `notifications:delete`）。
+* 一括更新・一括削除は、指定したすべての通知の所有者である場合のみ実行できる。所有者でない通知が1件でも含まれる場合は 404 を返し、全件をロールバックする（5.3 参照）。
+
 ---
 
 ## 5. 認証・認可設計
@@ -400,7 +423,7 @@ end
 - L3 Identity Componentとの認証フローは、利用ユーザの場合は、認可コードフローにより認証を行い取得したアクセストークンを利用する。
 - L3 Identity Componentとの認証フローは、ユーザシステムの場合(人を介在しない場合)は、クレデンシャルフローにより認証を行い取得したアクセストークンを利用する。
 - 各APIのAuthorizationヘッダに付与されたアクセストークンを元に、利用ユーザまたは、ユーザシステムを特定し、認可情報をチェック後、該当する通知情報を返却する。
-- 認可機能は、通知機能とは別にOpenFGAを構築し、認可登録、認可チェックを行うことを前提とする。
+- 認可機能は、L3 Identity Componentの認可機能を使用する。認可登録、認可チェックは L3 の認可APIを経由して行う。
 
 ### 5.2 認可機能
 
@@ -409,13 +432,33 @@ end
 
 - 認可登録
   - 事前にユーザ(operator_id)単位で、通知機能のどのAPIに対してアクセス可能とするかを登録する。
-  - 認可登録は、認可機能(OpenFGA)のAPIを実行して登録する。
+  - 認可登録は、L3 の認可タプル登録API（`POST /authz/stores/{store_id}/write`）を実行して登録する。
 
 - 認可確認
   - 通知機能の各API内で、アクセストークンを確認し、operator_idを取得
-  - 通知機能の各APIから認可機能に該当operator_idが対象の通知機能のAPIに対して認可登録がされているかを問い合わせる。
+  - 通知機能の各APIから L3 の認可判定API（AuthZEN: `POST /authz/stores/{store_id}/access/v1/evaluation`）に、該当operator_idが対象の通知機能のAPIに対して認可登録がされているかを問い合わせる。
+    - L3 へは、本ソフトウェアのAPIキー（`API-Key` ヘッダ）と、APIの呼び出し元のアクセストークン（`Authorization` ヘッダ）で認証する。
+    - 判定内容は「`user:{operator_id}` が `api_endpoint:{対象API}` に対して `can_access` の関係を持つか」とする。
   - 認可されている場合は、APIを実行。
   - 認可されていない場合は、403エラーを返す。
+
+### 5.3 データの分離
+
+- 通知・通知先リストは、登録した提供者（所有者）ごとに分離する。所有者は、アクセストークンの `operator_id` で判定する。
+  - 通知は、登録時のアクセストークンの `operator_id` を所有者とする。
+  - 通知先リストは、リクエストのリスト所有者ID（`owner_id`）がアクセストークンの `operator_id` と一致しない場合は 403 を返す。
+- 通知の受信者は、登録時点で確定する（直接指定した受信者と、指定した通知先リストのメンバー）。
+- APIごとに、実行できる利用者を次のとおりとする。権限のないデータは、存在しないデータと同じ扱い（404）とする。
+
+| API | 所有者 | 受信者 | それ以外 |
+| --- | --- | --- | --- |
+| 通知先リスト取得・更新・削除 | ○ | - | 404 |
+| 通知先リスト一覧取得 | 自分が所有するリストのみ返す | - | - |
+| 通知登録（単件・一括） | ○（指定できる通知先リストは自分が所有するもののみ） | - | - |
+| 通知詳細取得 | ○ | ○（通知確認状態・データ受領状態は自分の分のみ） | 404 |
+| 通知更新・削除（単件・一括） | ○ | 404 | 404 |
+| 通知一覧取得 | - | 自分が受信者である通知のみ返す | - |
+| 通知確認状態更新・データ受領状態更新 | - | ○ | 404 |
 
 ## 6. データ設計
 
@@ -442,6 +485,7 @@ end
 
 * 通知ID `notification_id`（必須・一意・UUID）
 * 通知種別 `type_id`（必須・UUID・FK → notification_type）
+* 所有者ID `owner_id`（新規登録時は必須。登録した提供者の `operator_id`。所有者を補完できなかった既存データのみ NULL）
 * 通知タイトル `title`（必須・varchar(500)）
 * 通知内容 `content`（必須）
 * 通知受信者IDリスト `target_ids`（任意・配列）
@@ -455,6 +499,7 @@ end
 
 * 通知ID `notification_id`（必須・FK → notification）
 * 通知先リストID `target_list_id`（必須・FK → notification_target_list）
+* 所有者ID `owner_id`（新規登録時は必須。通知と通知先リストで同一であることを複合外部キーで保証）
 * 主キー方針（論理）：(`notification_id`, `target_list_id`) 複合一意
 
 ### 6.1.5 通知種別 `notification_type`
@@ -505,6 +550,7 @@ erDiagram
   NOTIFICATION {
     UUID notification_id PK "通知ID"
     UUID type_id FK "通知種別ID"
+    STRING owner_id "所有者ID"
     STRING title "通知タイトル(500文字)"
     TEXT content "通知内容"
     ARRAY target_ids "通知先ユーザID集合"
@@ -517,6 +563,7 @@ erDiagram
   NOTIFICATION_TARGET_LIST_MAP {
     UUID notification_id PK,FK "通知ID"
     UUID target_list_id PK,FK "通知先リストID"
+    STRING owner_id FK "所有者ID"
   }
 
   NOTIFICATION_TYPE {
@@ -560,5 +607,6 @@ erDiagram
 | --- | ---------- | --------------------------------------------------------------------------------------------------------- |
 | 1.0 | 2026-02-28 | 第1.0版 |
 | 1.1 | 2026-08-31 | 第1.1版 |
+| 1.2 | 2026-09-30 | 第1.2版 |
 
 ---
