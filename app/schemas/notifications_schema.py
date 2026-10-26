@@ -254,7 +254,7 @@ class NotificationBulkUpdateRequest(BaseSchema):
     """通知一括更新 リクエスト"""
     notifications: List[NotificationUpdate] = Field(
         ..., min_length=1, max_length=BULK_MAX_ITEMS,
-        description=f"更新する通知のリスト（1～{BULK_MAX_ITEMS}件）。各要素の notification_id で更新対象を指定する"
+        description=f"更新する通知のリスト（1～{BULK_MAX_ITEMS}件）。各要素の notification_id で更新対象を指定する。同じ通知IDの重複指定は不可（422）"
     )
 
     model_config = ConfigDict(
@@ -277,7 +277,7 @@ class NotificationBulkDeleteRequest(BaseSchema):
     """通知一括削除 リクエスト"""
     notification_ids: List[UUID] = Field(
         ..., min_length=1, max_length=BULK_MAX_ITEMS,
-        description=f"削除する通知IDのリスト（1～{BULK_MAX_ITEMS}件）"
+        description=f"削除する通知IDのリスト（1～{BULK_MAX_ITEMS}件）。同じ通知IDの重複指定は不可（422）"
     )
 
     model_config = ConfigDict(

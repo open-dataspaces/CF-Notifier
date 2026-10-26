@@ -3572,7 +3572,7 @@
           "通知"
         ],
         "summary": "通知一括更新API",
-        "description": "複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。通知の所有者のみ更新できます。",
+        "description": "複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。通知の所有者のみ更新できます。同じ通知IDを重複して指定した場合は、リクエストの検証で 422 を返し、更新を開始しません。",
         "operationId": "bulk_update_notifications_api_v1_notifications_bulk_put",
         "security": [
           {
@@ -4026,7 +4026,7 @@
           "通知"
         ],
         "summary": "通知一括削除API",
-        "description": "複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。通知の所有者のみ削除できます。",
+        "description": "複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。通知の所有者のみ削除できます。同じ通知IDを重複して指定した場合は、リクエストの検証で 422 を返し、削除を開始しません。",
         "operationId": "bulk_delete_notifications_api_v1_notifications_bulk_delete_post",
         "security": [
           {
@@ -7058,7 +7058,7 @@
             "maxItems": 100,
             "minItems": 1,
             "title": "Notification Ids",
-            "description": "削除する通知IDのリスト（1～100件）"
+            "description": "削除する通知IDのリスト（1～100件）。同じ通知IDの重複指定は不可（422）"
           }
         },
         "additionalProperties": false,
@@ -7079,7 +7079,7 @@
             "maxItems": 100,
             "minItems": 1,
             "title": "Notifications",
-            "description": "更新する通知のリスト（1～100件）。各要素の notification_id で更新対象を指定する"
+            "description": "更新する通知のリスト（1～100件）。各要素の notification_id で更新対象を指定する。同じ通知IDの重複指定は不可（422）"
           }
         },
         "additionalProperties": false,

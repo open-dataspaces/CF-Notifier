@@ -291,7 +291,7 @@ async def bulk_create_notifications(
     "/notifications/bulk",
     response_model=NotificationBulkUpdateResponse,
     summary="通知一括更新API",
-    description="複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。通知の所有者のみ更新できます。",
+    description="複数の通知を一括で更新します。1件でも失敗した場合は全件を更新しません。通知の所有者のみ更新できます。同じ通知IDを重複して指定した場合は、リクエストの検証で 422 を返し、更新を開始しません。",
     responses={
         status.HTTP_200_OK: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},
@@ -405,7 +405,7 @@ async def bulk_update_notifications(
     "/notifications/bulk-delete",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="通知一括削除API",
-    description="複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。通知の所有者のみ削除できます。",
+    description="複数の通知を一括で削除します。1件でも失敗した場合は全件を削除しません。通知の所有者のみ削除できます。同じ通知IDを重複して指定した場合は、リクエストの検証で 422 を返し、削除を開始しません。",
     responses={
         status.HTTP_204_NO_CONTENT: {"description": "成功"},
         status.HTTP_400_BAD_REQUEST: {"description": "パラメータエラー", "model": ErrorResponse},

@@ -307,7 +307,7 @@ alt 通知情報一括更新
   CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 通知情報更新(UPDATE ※所有者のみ、更新日時が一致する場合のみ)を通知ID順に件数分実行（1トランザクション）
   DIST_DB2-->>DIST: 更新結果
-  Note over DIST,DIST_DB2: 1件でも失敗（更新日時の不一致を含む）した場合は全件ロールバックし、エラーを返す
+  Note over DIST,DIST_DB2: 1件でも失敗（更新日時の不一致を含む）した場合は全件ロールバックし、エラーを返す<BR>同じ通知IDの重複指定はリクエストの検証で 422 とし、更新を開始しない
   DIST-->>CORE_L2: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時]のリスト)
   CORE_L2-->>P_SA: 200 OK<BR>([通知ID,通知種別,通知タイトル,通知内容,通知先ユーザIDのリスト,通知先リストID,データID,作成日時,更新日時]のリスト)
 end
@@ -325,7 +325,7 @@ alt 通知情報一括削除
   CORE_L3-->>DIST: 認可結果 (decision)
   DIST->>DIST_DB2: 通知情報削除(DELETE ※所有者のみ)を通知ID順に件数分実行（1トランザクション）
   DIST_DB2-->>DIST: 削除結果
-  Note over DIST,DIST_DB2: 1件でも失敗した場合は全件ロールバックし、エラーを返す
+  Note over DIST,DIST_DB2: 1件でも失敗した場合は全件ロールバックし、エラーを返す<BR>同じ通知IDの重複指定はリクエストの検証で 422 とし、削除を開始しない
   DIST-->>CORE_L2: 204 No Content
   CORE_L2-->>P_SA: 204 No Content
 end
@@ -808,6 +808,7 @@ WHERE target_list_id = ? AND owner_id = ? AND updated_at = ?;
 - 競合検出時はHTTPステータス409（Conflict）で応答
 - エラーレスポンスの detail に、送信された`updated_at`（Expected）と現在の`updated_at`（Actual）を含め、最新データの再取得を促す
 - 一括更新APIでは、1件でも競合した場合は全件をロールバックし、409で応答する
+- 一括更新API・一括削除APIで同じ通知IDを重複して指定した場合は、リクエストの検証で422（バリデーションエラー）を返し、DBの更新を開始しない（2件目の処理で409や404にはならない）
 - エラーレスポンス例
 ```json
 {
