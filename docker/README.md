@@ -289,7 +289,50 @@ PostgreSQL (5432) とは競合しません。デバッグ等でホスト公開�
 
 ### L3 認可判定 API
 
-notifier では認可チェック（`AUTHZ_ENABLED: false`）がデフォルトで無効です。
+notifier では認可チェック（`AUTHZ_ENABLED: false`）がデフォルトで無効です。有効にすると、各 API の実行前に L3 の認可判定 API（AuthZEN）へ「`user:{operator_id}` が `api_endpoint:{エンドポイント名}` に対して `can_access` の関係を持つか」を問い合わせ、許可されていない場合は 403 を返します（認可の考え方は [基本設計](../docs/basic_design.md) の「5.2 認可機能」を参照）。
+
+#### 認可を有効にする手順
+
+1. **notifier の環境変数を設定する**
+
+   | 変数名 | 設定内容 |
+   |---|---|
+   | `AUTHZ_ENABLED` | `true` |
+   | `L3_BASE_URL` | L3 の URL（トークン検証と共通） |
+   | `L3_API_KEY` | notifier に発行された L3 の API キー（トークン検証と共通） |
+   | `AUTHZ_STORE_ID` | notifier の API 実行権限を登録した L3 の認可ストア ID |
+
+2. **L3 側で認可ストアと認可モデルを登録する**
+
+   notifier 用の認可ストアを作成し、次の型と関係を持つ認可モデルを登録します。
+
+   - 型 `user`（利用者。ID はアクセストークンの `operator_id`）
+   - 型 `api_endpoint`（notifier の API。関係 `can_access` を `user` に対して定義する）
+
+3. **各 API の実行権限（タプル）を登録する**
+
+   利用者（`operator_id`）ごとに、実行を許可する API のタプル `user:{operator_id}` `can_access` `api_endpoint:{エンドポイント名}` を L3 の認可タプル登録 API（`POST /authz/stores/{store_id}/write`）で登録します。エンドポイント名は、コード中の名前（`notifications:post` など）の `:` を `-` に置き換えたものです。
+
+   | エンドポイント名 | 対象 API |
+   |---|---|
+   | `api_endpoint:notification-targets-post` | POST /api/v1/notification-targets（通知先リスト登録） |
+   | `api_endpoint:notification-targets-get-all` | GET /api/v1/notification-targets（通知先リスト一覧取得） |
+   | `api_endpoint:notification-targets-get` | GET /api/v1/notification-targets/{target_list_id}（通知先リスト取得） |
+   | `api_endpoint:notification-targets-put` | PUT /api/v1/notification-targets/{target_list_id}（通知先リスト更新） |
+   | `api_endpoint:notification-targets-delete` | DELETE /api/v1/notification-targets/{target_list_id}（通知先リスト削除） |
+   | `api_endpoint:notifications-post` | POST /api/v1/notifications（通知登録）、POST /api/v1/notifications/bulk（通知一括登録） |
+   | `api_endpoint:notifications-get` | GET /api/v1/notifications（通知一覧取得） |
+   | `api_endpoint:notifications-get-id` | GET /api/v1/notifications/{notification_id}（通知取得） |
+   | `api_endpoint:notifications-put` | PUT /api/v1/notifications/{notification_id}（通知更新）、PUT /api/v1/notifications/bulk（通知一括更新） |
+   | `api_endpoint:notifications-delete` | DELETE /api/v1/notifications/{notification_id}（通知削除）、POST /api/v1/notifications/bulk-delete（通知一括削除） |
+   | `api_endpoint:notifications-receive-put` | PUT /api/v1/notifications/{notification_id}/receive（通知確認状態更新） |
+   | `api_endpoint:notifications-data-receive-put` | PUT /api/v1/notifications/{notification_id}/data/{data_id}/receive（データ受領状態更新） |
+
+4. **L3 の API キーのレルムと認可ストアを紐付ける**
+
+   認可判定には、`L3_API_KEY` のレルムが `AUTHZ_STORE_ID` の認可ストアに紐付けられている必要があります。紐付けが登録されていることを確認してください。L3 の構築方法によっては、初期設定スクリプトでこの紐付けが登録されない場合があり、その場合は紐付けのタプルを別途登録する必要があります。
+
+認可を有効にした状態で API を呼び出し、権限を登録した利用者は 2xx、登録していない利用者は 403 になることを確認してください。
 
 ---
 
