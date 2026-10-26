@@ -2,7 +2,7 @@
 import json
 from typing import Annotated, List, Literal
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
-from pydantic import computed_field, field_validator
+from pydantic import AliasChoices, Field, computed_field, field_validator
 
 
 class Settings(BaseSettings):
@@ -81,7 +81,10 @@ class Settings(BaseSettings):
     # ===========================================
     # CORS (本番環境では具体的なオリジンを指定すること)
     # ===========================================
-    ALLOWED_HOSTS: Annotated[List[str], NoDecode] = []
+    # 旧名 ALLOWED_HOSTS も経過措置として読み込む（両方ある場合は CORS_ALLOWED_ORIGINS を優先）
+    CORS_ALLOWED_ORIGINS: Annotated[List[str], NoDecode] = Field(
+        default=[], validation_alias=AliasChoices("CORS_ALLOWED_ORIGINS", "ALLOWED_HOSTS")
+    )
 
     @field_validator('SECRET_KEY')
     @classmethod
@@ -90,10 +93,10 @@ class Settings(BaseSettings):
         # 開発環境では空でも許容（他のバリデータで環境をチェック）
         return v
 
-    @field_validator('ALLOWED_HOSTS', mode='before')
+    @field_validator('CORS_ALLOWED_ORIGINS', mode='before')
     @classmethod
-    def parse_allowed_hosts(cls, v):
-        """ALLOWED_HOSTSをパース（カンマ区切り文字列・JSON 配列・リスト）"""
+    def parse_cors_allowed_origins(cls, v):
+        """CORS_ALLOWED_ORIGINSをパース（カンマ区切り文字列・JSON 配列・リスト）"""
         if isinstance(v, str):
             v = v.strip()
             if not v:
