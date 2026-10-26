@@ -188,6 +188,7 @@ docker compose up --build
 | `SECRET_KEY` | `dev-only-secret-key-...` | JWT署名キー（本番では必ず変更） |
 | `ALLOWED_HOSTS` | `http://localhost:3000` | CORS許可オリジン（カンマ区切りまたは JSON 配列） |
 | `X_NOTIFICATION_API_KEY` | `dev-notification-api-key` | API キー |
+| `OPERATOR_ID_VERIFICATION_ENABLED` | `false` | 通知先リストの登録・更新で、リクエストボディの `owner_id` がアクセストークンの `operator_id` と一致するかを検証する（不一致は 403）。`false` の場合は検証せず、他の提供者の `owner_id` を指定した通知先リストを登録・更新できるため、**本番環境では必ず `true` にすること**。`ENVIRONMENT=DEVELOP` では設定にかかわらず検証しない |
 
 ### L3 認証設定
 
