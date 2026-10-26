@@ -34,7 +34,16 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     description="""
 ## 変更履歴
+### version 1.1.0  2026/10
+- 通知・通知先リストの更新 API に楽観的排他制御を追加（リクエストボディの `updated_at` が必須。最新の更新日時と一致しない場合は 409）
+- 通知の一括登録・一括更新・一括削除 API を追加
+- 取得 API で ETag / Last-Modified による条件付きリクエスト（304）に対応
+- 通知・通知先リストを所有者（提供者）ごとに分離（所有者・受信者以外からの取得・更新・削除は 404。通知先リストの `owner_id` はアクセストークンの `operator_id` と照合）
+- 認可確認を L3 の認可判定 API 経由に変更（設定項目を `L3_BASE_URL`・`L3_API_KEY`・`AUTHZ_STORE_ID` に変更）
+- CORS の許可オリジンの設定名を `ALLOWED_HOSTS` から `CORS_ALLOWED_ORIGINS` に変更（旧名も読み込む）
+- 通知一覧取得 API の `status` に不正な値を指定した場合は 422 を返すよう修正
 ### version 1.0.0  2026/02
+- 初版
 """,
     version=settings.VERSION,
     log_level="info",

@@ -88,6 +88,20 @@ docker compose exec app alembic -c migrations/alembic.ini upgrade head
 
 詳細な手順（環境変数、テスト実行、ODSスタックとの統合、PostgreSQL 18 の注意点など）は [Docker 環境構築ガイド](docker/README.md) を参照してください。
 
+## バージョン 1.1.0 での変更
+
+2026年4月以降に確認された不備の修正と機能の追加を行いました。変更の一覧は API ドキュメント（`/docs`）の変更履歴を参照してください。
+
+### 互換性に影響する変更
+
+1.0.0 から利用している場合は、次の点を確認してください。
+
+- **更新 API の `updated_at` が必須になりました**: 通知更新 API・通知先リスト更新 API のリクエストボディに、取得時の `updated_at` をそのまま指定してください。最新の更新日時と一致しない場合は 409 Conflict を返します。
+- **通知・通知先リストを所有者ごとに分離しました**: 通知の取得・更新・削除は、通知の所有者・受信者以外からは 404 を返します。通知先リストの登録・更新で `owner_id` がアクセストークンの `operator_id` と異なる場合は 403 を返します（`OPERATOR_ID_VERIFICATION_ENABLED=true` の場合）。
+- **認可確認の設定項目を変更しました**: `AUTHZ_BASE_URL`・`AUTHZ_OPENFGA_STORE_ID`・`AUTHZ_OPENFGA_MODEL_ID` に代えて `L3_BASE_URL`・`L3_API_KEY`・`AUTHZ_STORE_ID` を使用します。認可確認は L3 の認可判定 API 経由で行います。
+- **CORS の許可オリジンの設定名を変更しました**: `ALLOWED_HOSTS` に代えて `CORS_ALLOWED_ORIGINS` を使用してください。旧名も当面は読み込みます。
+- **データベースのマイグレーション（002）の適用が必要です**: 通知に所有者ID を追加します。既存の通知のうち所有者を補完できないものの扱いと対処方法は、[Docker 環境構築ガイド](docker/README.md) の「既存環境への 002（所有者の分離）の適用」を参照してください。
+
 ## ドキュメント
 
 | ドキュメント | 説明 |
