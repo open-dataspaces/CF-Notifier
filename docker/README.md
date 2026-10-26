@@ -120,6 +120,44 @@ alembic -c migrations/alembic.ini history
 alembic -c migrations/alembic.ini revision --autogenerate -m "add_new_table"
 ```
 
+### 既存環境への 002（所有者の分離）の適用
+
+マイグレーション `002_owner_separation` は、通知に所有者ID（`owner_id`）を追加し、既存の通知には次のとおり所有者を補完します。
+
+| 既存の通知 | 補完結果 |
+|---|---|
+| 通知先リストを指定して登録した通知（リストの所有者が 1 人） | リストの所有者で補完する |
+| 受信者IDを直接指定して登録した通知（通知先リストの指定なし） | 補完されず、所有者なし（NULL）のまま |
+| 所有者の異なる複数の通知先リストを指定して登録した通知 | 補完されず、所有者なし（NULL）のまま |
+
+所有者なしの通知は、どの提供者からも詳細取得・更新・削除ができません（404）。受信者による一覧取得・詳細取得・通知確認・データ受領状態の更新は従来どおり行えます。所有者なしのままで問題がなければ、追加の作業は不要です。
+
+該当する通知を所有者が更新・削除できるようにする必要がある場合は、マイグレーションの適用後に、次の SQL で所有者を手動で設定してください。
+
+```sql
+-- 所有者なしの通知と、その通知が指定している通知先リストの所有者を確認する
+SELECT n.notification_id, n.title, n.created_at, array_agg(l.owner_id) AS list_owner_ids
+FROM notification n
+LEFT JOIN notification_target_list_map m ON m.notification_id = n.notification_id
+LEFT JOIN notification_target_list l ON l.target_list_id = m.target_list_id
+WHERE n.owner_id IS NULL
+GROUP BY n.notification_id, n.title, n.created_at
+ORDER BY n.created_at;
+```
+
+```sql
+-- 通知の所有者を設定する（'<notification_id>' と '<owner_id>' を置き換えて、通知ごとに実行する）
+BEGIN;
+-- 設定する所有者以外が所有する通知先リストとの関連付けを外す（通知と通知先リストの所有者は一致している必要がある）
+-- 受信者は通知の登録時点で確定しているため、関連付けを外しても受信者には届いたままになる
+DELETE FROM notification_target_list_map m
+USING notification_target_list l
+WHERE m.notification_id = '<notification_id>' AND l.target_list_id = m.target_list_id AND l.owner_id <> '<owner_id>';
+UPDATE notification SET owner_id = '<owner_id>' WHERE notification_id = '<notification_id>' AND owner_id IS NULL;
+UPDATE notification_target_list_map SET owner_id = '<owner_id>' WHERE notification_id = '<notification_id>' AND owner_id IS NULL;
+COMMIT;
+```
+
 ### データベースのリセット
 
 ```bash
