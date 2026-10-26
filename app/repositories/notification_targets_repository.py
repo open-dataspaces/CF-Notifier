@@ -9,7 +9,7 @@
 """
 
 from typing import List, Optional, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import (
@@ -428,7 +428,7 @@ class NotificationTargetListRepository(BaseRepository):
             if current_owner_id is None:
                 return None
 
-            values = {'updated_at': datetime.utcnow()}
+            values = {'updated_at': datetime.now(timezone.utc)}
             if name is not None:
                 values['name'] = name
             if owner_id is not None:
@@ -523,7 +523,7 @@ class NotificationTargetListRepository(BaseRepository):
                         .where(notification_target_list_map.c.target_list_id == target_list.target_list_id)
                     )
                 )
-                .values(updated_at=datetime.utcnow())
+                .values(updated_at=datetime.now(timezone.utc))
                 .execution_options(synchronize_session='fetch')
             )
             self.db.delete(target_list)

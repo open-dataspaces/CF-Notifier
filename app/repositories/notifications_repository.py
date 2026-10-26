@@ -9,7 +9,7 @@
 """
 
 from typing import List, Optional, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import (
@@ -251,7 +251,7 @@ class NotificationTypeRepository(BaseRepository):
             if type_name is not None:
                 notification_type.type_name = type_name
             
-            notification_type.updated_at = datetime.utcnow()
+            notification_type.updated_at = datetime.now(timezone.utc)
             
             self.db.flush()
             
@@ -533,7 +533,7 @@ class NotificationRepository(BaseRepository):
             if owner_id is None:
                 return None
             
-            values = {'updated_at': datetime.utcnow()}
+            values = {'updated_at': datetime.now(timezone.utc)}
             if title is not None:
                 values['title'] = title
             if content is not None:
@@ -603,7 +603,7 @@ class NotificationRepository(BaseRepository):
                 return False
             
             notification.status = 'deleted'
-            notification.updated_at = datetime.utcnow()
+            notification.updated_at = datetime.now(timezone.utc)
             
             self.db.flush()
             
@@ -705,7 +705,7 @@ class NotificationConfirmedRepository(BaseRepository):
             if confirmation:
                 # 更新
                 confirmation.status = status
-                confirmation.updated_at = datetime.utcnow()
+                confirmation.updated_at = datetime.now(timezone.utc)
                 logger.info("Updated existing confirmation")
             else:
                 # 新規作成
@@ -910,7 +910,7 @@ class NotificationDataConfirmedRepository(BaseRepository):
             if data_confirmation:
                 # 更新
                 data_confirmation.status = status
-                data_confirmation.updated_at = datetime.utcnow()
+                data_confirmation.updated_at = datetime.now(timezone.utc)
                 logger.info("Updated existing data confirmation")
             else:
                 # 新規作成
