@@ -17,7 +17,7 @@ import uuid
 # ログ設定のインポート
 from app.core.logging import get_logger, log_execution_time
 from app.core.custom_exceptions import RecordNotFoundError, OptimisticLockError
-from app.utils.helpers import to_naive_utc
+from app.utils.helpers import to_naive_utc, to_utc_z
 logger = get_logger(__name__)
 
 # スキーマのインポート
@@ -298,8 +298,8 @@ class NotificationTargetListService(BaseService):
                     raise RecordNotFoundError("NotificationTargetList", target_list_id)
                 raise OptimisticLockError(
                     f"NotificationTargetList({target_list_id})",
-                    expected_updated_at.isoformat(),
-                    current.updated_at.isoformat()
+                    to_utc_z(expected_updated_at),
+                    to_utc_z(current.updated_at)
                 )
 
             self.commit()

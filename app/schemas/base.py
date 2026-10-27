@@ -1,6 +1,8 @@
 """Base Schemas"""
 from datetime import datetime
-from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field, field_serializer
+
+from app.utils.helpers import to_utc_z
 from pydantic.alias_generators import to_camel
 
 # ----------------------------------------------------------------------
@@ -32,6 +34,13 @@ class BaseSchema(PydanticBaseModel):
         # スキーマ生成時やシリアライズ時にaliasを優先させる設定
         by_alias=True
     )
+
+    @field_serializer("*", mode="wrap", when_used="json")
+    def _serialize_datetime_as_utc_z(self, value, handler):
+        # 応答の日時は他コンポーネントの API と同じ UTC・末尾 Z の形式にそろえる
+        if isinstance(value, datetime):
+            return to_utc_z(value)
+        return handler(value)
 
     # --- 共通ヘルパーメソッド ---
     

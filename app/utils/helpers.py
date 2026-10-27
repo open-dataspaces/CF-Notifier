@@ -28,6 +28,15 @@ def to_naive_utc(dt: datetime) -> datetime:
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def to_utc_z(dt: datetime) -> str:
+    """Format datetime as UTC ISO 8601 with microseconds and a trailing Z"""
+    # タイムゾーンなしの値は DB に格納した UTC の日時なので、UTC として扱う。
+    # 楽観的排他制御で取得時の値をそのまま比較できるよう、マイクロ秒は常に 6 桁で出力する
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
 def to_http_date(dt: datetime) -> str:
     """Format datetime as HTTP-date"""
     if dt.tzinfo is None:

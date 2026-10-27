@@ -97,6 +97,7 @@ docker compose exec app alembic -c migrations/alembic.ini upgrade head
 1.0.0 から利用している場合は、次の点を確認してください。
 
 - **更新 API の `updated_at` が必須になりました**: 通知更新 API・通知先リスト更新 API のリクエストボディに、取得時の `updated_at` をそのまま指定してください。最新の更新日時と一致しない場合は 409 Conflict を返します。
+- **応答の日時の形式を変更しました**: 応答の日時（`created_at`、`updated_at` など）は、UTC・マイクロ秒精度で末尾に `Z` を付けた形式（例: `2026-01-15T10:30:15.123456Z`）になりました。1.0.0 ではタイムゾーン表記がありませんでした。リクエストの日時は、`Z` 付き・タイムゾーン表記なし（UTC とみなす）のどちらでも受け付けます。
 - **通知・通知先リストを所有者ごとに分離しました**: 通知の取得・更新・削除は、通知の所有者・受信者以外からは 404 を返します。通知先リストの登録・更新で `owner_id` がアクセストークンの `operator_id` と異なる場合は 403 を返します（`OPERATOR_ID_VERIFICATION_ENABLED=true` の場合）。
 - **認可確認の設定項目を変更しました**: `AUTHZ_BASE_URL`・`AUTHZ_OPENFGA_STORE_ID`・`AUTHZ_OPENFGA_MODEL_ID` に代えて `L3_BASE_URL`・`L3_API_KEY`・`AUTHZ_STORE_ID` を使用します。認可確認は L3 の認可判定 API 経由で行います。
 - **CORS の許可オリジンの設定名を変更しました**: `ALLOWED_HOSTS` に代えて `CORS_ALLOWED_ORIGINS` を使用してください。旧名も当面は読み込みます。
