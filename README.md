@@ -88,7 +88,7 @@ docker compose exec app alembic -c migrations/alembic.ini upgrade head
 
 詳細な手順（環境変数、テスト実行、ODSスタックとの統合、PostgreSQL 18 の注意点など）は [Docker 環境構築ガイド](docker/README.md) を参照してください。
 
-## バージョン 1.1.0 での変更
+## バージョン 1.2.0 での変更
 
 2026年4月以降に確認された不備の修正と機能の追加を行いました。変更の一覧は API ドキュメント（`/docs`）の変更履歴を参照してください。
 

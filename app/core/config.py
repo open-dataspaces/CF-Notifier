@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     # Application
     # ===========================================
     PROJECT_NAME: str = "Notifier API"
-    VERSION: str = "1.1.0"
+    VERSION: str = "1.2.0"
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
