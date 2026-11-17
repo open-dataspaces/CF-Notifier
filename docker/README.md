@@ -120,6 +120,44 @@ alembic -c migrations/alembic.ini history
 alembic -c migrations/alembic.ini revision --autogenerate -m "add_new_table"
 ```
 
+### 既存環境への 002（所有者の分離）の適用
+
+マイグレーション `002_owner_separation` は、通知に所有者ID（`owner_id`）を追加し、既存の通知には次のとおり所有者を補完します。
+
+| 既存の通知 | 補完結果 |
+|---|---|
+| 通知先リストを指定して登録した通知（リストの所有者が 1 人） | リストの所有者で補完する |
+| 受信者IDを直接指定して登録した通知（通知先リストの指定なし） | 補完されず、所有者なし（NULL）のまま |
+| 所有者の異なる複数の通知先リストを指定して登録した通知 | 補完されず、所有者なし（NULL）のまま |
+
+所有者なしの通知は、どの提供者からも詳細取得・更新・削除ができません（404）。受信者による一覧取得・詳細取得・通知確認・データ受領状態の更新は従来どおり行えます。所有者なしのままで問題がなければ、追加の作業は不要です。
+
+該当する通知を所有者が更新・削除できるようにする必要がある場合は、マイグレーションの適用後に、次の SQL で所有者を手動で設定してください。
+
+```sql
+-- 所有者なしの通知と、その通知が指定している通知先リストの所有者を確認する
+SELECT n.notification_id, n.title, n.created_at, array_agg(l.owner_id) AS list_owner_ids
+FROM notification n
+LEFT JOIN notification_target_list_map m ON m.notification_id = n.notification_id
+LEFT JOIN notification_target_list l ON l.target_list_id = m.target_list_id
+WHERE n.owner_id IS NULL
+GROUP BY n.notification_id, n.title, n.created_at
+ORDER BY n.created_at;
+```
+
+```sql
+-- 通知の所有者を設定する（'<notification_id>' と '<owner_id>' を置き換えて、通知ごとに実行する）
+BEGIN;
+-- 設定する所有者以外が所有する通知先リストとの関連付けを外す（通知と通知先リストの所有者は一致している必要がある）
+-- 受信者は通知の登録時点で確定しているため、関連付けを外しても受信者には届いたままになる
+DELETE FROM notification_target_list_map m
+USING notification_target_list l
+WHERE m.notification_id = '<notification_id>' AND l.target_list_id = m.target_list_id AND l.owner_id <> '<owner_id>';
+UPDATE notification SET owner_id = '<owner_id>' WHERE notification_id = '<notification_id>' AND owner_id IS NULL;
+UPDATE notification_target_list_map SET owner_id = '<owner_id>' WHERE notification_id = '<notification_id>' AND owner_id IS NULL;
+COMMIT;
+```
+
 ### データベースのリセット
 
 ```bash
@@ -148,27 +186,29 @@ docker compose up --build
 | 変数名 | デフォルト値 | 説明 |
 |---|---|---|
 | `SECRET_KEY` | `dev-only-secret-key-...` | JWT署名キー（本番では必ず変更） |
-| `CORS_ORIGINS` | `http://localhost:3000` | CORS許可オリジン |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | CORS許可オリジン（カンマ区切りまたは JSON 配列）。1.0.0 の `ALLOWED_HOSTS` も経過措置として読み込む（両方設定した場合は `CORS_ALLOWED_ORIGINS` を優先） |
 | `X_NOTIFICATION_API_KEY` | `dev-notification-api-key` | API キー |
+| `OPERATOR_ID_VERIFICATION_ENABLED` | `false` | 通知先リストの登録・更新で、リクエストボディの `owner_id` がアクセストークンの `operator_id` と一致するかを検証する（不一致は 403）。`false` の場合は検証しないため、**本番環境では必ず `true` にすること**。`ENVIRONMENT=DEVELOP` では設定にかかわらず検証しない |
 
 ### L3 認証設定
 
 | 変数名 | デフォルト値 | 説明 |
 |---|---|---|
-| `L3_BASE_URL` | `https://dev-auth.example.com` | L3 認証サーバー URL |
+| `L3_BASE_URL` | `https://dev-auth.example.com` | L3 の URL（トークン検証・認可判定 API の接続先） |
 | `L3_INTROSPECT_ENDPOINT` | `/auth/token/introspect` | トークン検証エンドポイント |
 | `L3_API_KEY` | `dev-l3-api-key` | L3 API キー |
 | `L3_CLIENT_ID` | `dev-client-id` | L3 クライアント ID |
 | `L3_CLIENT_SECRET` | `dev-client-secret` | L3 クライアントシークレット |
 
-### 認可サービス設定（OpenFGA）(独自に認可を構築した場合のみ)
+### 認可サービス設定（L3 認可判定API）
 
 | 変数名 | デフォルト値 | 説明 |
 |---|---|---|
 | `AUTHZ_ENABLED` | `false` | 認可チェック有効/無効 |
-| `AUTHZ_BASE_URL` | `http://openfga:8080` | OpenFGA サーバー URL |
-| `AUTHZ_OPENFGA_STORE_ID` | `01KFY9RF3HQM...` | ストア ID |
-| `AUTHZ_OPENFGA_MODEL_ID` | `01KFY9RF3YQ9...` | モデル ID |
+| `AUTHZ_STORE_ID` | `01KFY9RF3HQM...` | Notifier の API 実行権限を登録した L3 の認可ストア ID |
+| `L3_AUTHZ_EVALUATION_ENDPOINT` | `/authz/stores/{store_id}/access/v1/evaluation` | L3 の認可判定 API（AuthZEN）のパス |
+
+認可確認は L3 の認可判定 API を経由して行います（接続先・API キーは `L3_BASE_URL`・`L3_API_KEY` を使用）。`L3_API_KEY` のレルムが、`AUTHZ_STORE_ID` の認可ストアに紐付けられている必要があります。
 
 ### データベース設定
 
@@ -197,12 +237,12 @@ docker compose up --build
 
 ## ODS スタック統合
 
-ODS スタックの他サービス（OpenFGA 等）と連携して動かす場合の手順です。
+ODS スタックの他サービス（L3 等）と連携して動かす場合の手順です。
 
 ### 共有ネットワークへの参加
 
 `docker-compose.yml` の default ネットワークは共有ネットワーク（デフォルト名: `shared-network`）に接続されます。
-同一ネットワークに参加している他サービスとは、コンテナ名で相互通信できます（例: `http://openfga:8080`）。
+同一ネットワークに参加している他サービスとは、コンテナ名で相互通信できます。
 
 ネットワーク名は `SHARED_NETWORK_NAME` で変更できます。スタック側が `shared-network-ods` を使用している場合:
 
@@ -247,24 +287,52 @@ PostgreSQL (5432) とは競合しません。デバッグ等でホスト公開�
 
 ## 外部サービスとの連携
 
-### OpenFGA 認可サービス
+### L3 認可判定 API
 
-notifier では認可チェック（`AUTHZ_ENABLED: false`）がデフォルトで無効です。
+notifier では認可チェック（`AUTHZ_ENABLED: false`）がデフォルトで無効です。有効にすると、各 API の実行前に L3 の認可判定 API（AuthZEN）へ「`user:{operator_id}` が `api_endpoint:{エンドポイント名}` に対して `can_access` の関係を持つか」を問い合わせ、許可されていない場合は 403 を返します（認可の考え方は [基本設計](../docs/basic_design.md) の「5.2 認可機能」を参照）。
 
----
+#### 認可を有効にする手順
 
-## テスト実行
+1. **notifier の環境変数を設定する**
 
-```bash
-# プロジェクトルートから実行
+   | 変数名 | 設定内容 |
+   |---|---|
+   | `AUTHZ_ENABLED` | `true` |
+   | `L3_BASE_URL` | L3 の URL（トークン検証と共通） |
+   | `L3_API_KEY` | notifier に発行された L3 の API キー（トークン検証と共通） |
+   | `AUTHZ_STORE_ID` | notifier の API 実行権限を登録した L3 の認可ストア ID |
 
-# unit テストのみ（DB不要）
-docker compose -f docker/docker-compose.yml exec app pytest test/unit -v
+2. **L3 側で認可ストアと認可モデルを登録する**
 
-# 開発用イメージでテスト実行
-docker build -f docker/Dockerfile.dev -t notifier-api:dev .
-docker run --rm notifier-api:dev pytest test/unit -v --cov=app --cov-report=term-missing
-```
+   notifier 用の認可ストアを作成し、次の型と関係を持つ認可モデルを登録します。
+
+   - 型 `user`（利用者。ID はアクセストークンの `operator_id`）
+   - 型 `api_endpoint`（notifier の API。関係 `can_access` を `user` に対して定義する）
+
+3. **各 API の実行権限（タプル）を登録する**
+
+   利用者（`operator_id`）ごとに、実行を許可する API のタプル `user:{operator_id}` `can_access` `api_endpoint:{エンドポイント名}` を L3 の認可タプル登録 API（`POST /authz/stores/{store_id}/write`）で登録します。エンドポイント名は、コード中の名前（`notifications:post` など）の `:` を `-` に置き換えたものです。
+
+   | エンドポイント名 | 対象 API |
+   |---|---|
+   | `api_endpoint:notification-targets-post` | POST /api/v1/notification-targets（通知先リスト登録） |
+   | `api_endpoint:notification-targets-get-all` | GET /api/v1/notification-targets（通知先リスト一覧取得） |
+   | `api_endpoint:notification-targets-get` | GET /api/v1/notification-targets/{target_list_id}（通知先リスト取得） |
+   | `api_endpoint:notification-targets-put` | PUT /api/v1/notification-targets/{target_list_id}（通知先リスト更新） |
+   | `api_endpoint:notification-targets-delete` | DELETE /api/v1/notification-targets/{target_list_id}（通知先リスト削除） |
+   | `api_endpoint:notifications-post` | POST /api/v1/notifications（通知登録）、POST /api/v1/notifications/bulk（通知一括登録） |
+   | `api_endpoint:notifications-get` | GET /api/v1/notifications（通知一覧取得） |
+   | `api_endpoint:notifications-get-id` | GET /api/v1/notifications/{notification_id}（通知取得） |
+   | `api_endpoint:notifications-put` | PUT /api/v1/notifications/{notification_id}（通知更新）、PUT /api/v1/notifications/bulk（通知一括更新） |
+   | `api_endpoint:notifications-delete` | DELETE /api/v1/notifications/{notification_id}（通知削除）、POST /api/v1/notifications/bulk-delete（通知一括削除） |
+   | `api_endpoint:notifications-receive-put` | PUT /api/v1/notifications/{notification_id}/receive（通知確認状態更新） |
+   | `api_endpoint:notifications-data-receive-put` | PUT /api/v1/notifications/{notification_id}/data/{data_id}/receive（データ受領状態更新） |
+
+4. **L3 の API キーのレルムと認可ストアを紐付ける**
+
+   認可判定には、`L3_API_KEY` のレルムが `AUTHZ_STORE_ID` の認可ストアに紐付けられている必要があります。紐付けが登録されていることを確認してください。
+
+認可を有効にした状態で API を呼び出し、権限を登録した利用者は 2xx、登録していない利用者は 403 になることを確認してください。
 
 ---
 

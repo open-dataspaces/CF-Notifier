@@ -1,7 +1,6 @@
 """Common Dependencies"""
 import re
 from uuid import UUID, uuid4
-from typing import Literal
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -47,13 +46,15 @@ async def verify_access_token(
 ) -> dict:
     """Bearerトークンを検証"""
     # 開発環境ではトークン検証をスキップ
+    # トークンにUUIDを指定した場合は、それをoperator_idとして扱う
     if settings.IS_DEVELOP:
         logger.debug("Development mode: skipping token verification")
+        operator_id = credentials.credentials if UUID_PATTERN.match(credentials.credentials) else "dev-user"
         return {
             "active": True,
-            "user_id": "dev-user",
-            "sub": "dev-user",
-            "operator_id": "dev-user"
+            "user_id": operator_id,
+            "sub": operator_id,
+            "operator_id": operator_id
         }
 
     try:
@@ -90,8 +91,8 @@ async def verify_request_headers(
     user_agent: str = Header(..., min_length=1, alias="User-Agent"),
     x_tracking_id: str = Header(..., min_length=1, alias="X-TrackingId"),
     accept_language: str = Header(..., min_length=1, alias="Accept-Language"),
-    content_type: Literal["application/json"] = Header(..., alias="Content-Type"),
-    x_notification_api_key: str = Header(..., alias="x-notifier-api-key")
+    content_type: str = Header(..., alias="Content-Type", pattern=r"^application/json\s*(;.*)?$"),
+    x_notification_api_key: str = Header(..., alias="X-Notifier-API-Key", title="X-Notifier-API-Key")
 ):
     
     # X-TrackingId を厳密にバリデーション
@@ -157,6 +158,7 @@ def require_permission(endpoint_name: str, relation: str = "can_access"):
     async def check_permission(
         token_info: dict = Depends(verify_access_token),
         headers: dict = Depends(verify_request_headers),
+        credentials: HTTPAuthorizationCredentials = Depends(security),
     ):
         operator_id = token_info.get("operator_id")
         tracking_id = headers.get("x_tracking_id")
@@ -165,6 +167,7 @@ def require_permission(endpoint_name: str, relation: str = "can_access"):
             await authz_client.check_or_raise(
                 operator_id=operator_id,
                 endpoint_name=endpoint_name,
+                access_token=credentials.credentials,
                 relation=relation,
                 tracking_id=tracking_id
             )

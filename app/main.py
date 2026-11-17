@@ -1,4 +1,6 @@
 """FastAPI Application Entry Point"""
+import os
+
 from app.core.logging import setup_logging, get_logger
 
 setup_logging()
@@ -10,13 +12,21 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.v1.router import api_router
 from app.api.v1.endpoints import health
-from app.api.v1.response_headers import COMMON_RESPONSE_HEADERS, GET_RESPONSE_HEADERS
+from app.api.v1.response_headers import (
+    COMMON_RESPONSE_HEADERS,
+    GET_RESPONSE_HEADERS,
+    GET_RESOURCE_RESPONSE_HEADERS,
+    GET_REQUEST_PARAMETERS,
+    GET_RESOURCE_REQUEST_PARAMETERS,
+    NOT_MODIFIED_RESPONSE,
+)
 from app.core.config import settings
 from app.core.events import create_start_app_handler, create_stop_app_handler
 from app.middleware import (
     TrackingMiddleware,
     ContentTypeMiddleware,
     CommonSecurityHeadersMiddleware,
+    ConditionalRequestMiddleware,
     add_exception_handlers,
 )
 
@@ -24,7 +34,17 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     description="""
 ## 変更履歴
+### version 1.2.0  2026/10
+- 通知・通知先リストの更新 API に楽観的排他制御を追加（リクエストボディの `updated_at` が必須。最新の更新日時と一致しない場合は 409）
+- 応答の日時の形式を UTC・マイクロ秒・末尾 `Z`（例: `2026-01-15T10:30:15.123456Z`）に変更
+- 通知の一括登録・一括更新・一括削除 API を追加
+- 取得 API で ETag / Last-Modified による条件付きリクエスト（304）に対応
+- 通知・通知先リストを所有者（提供者）ごとに分離（所有者・受信者以外からの取得・更新・削除は 404。通知先リストの `owner_id` はアクセストークンの `operator_id` と照合）
+- 認可確認を L3 の認可判定 API 経由に変更（設定項目を `L3_BASE_URL`・`L3_API_KEY`・`AUTHZ_STORE_ID` に変更）
+- CORS の許可オリジンの設定名を `ALLOWED_HOSTS` から `CORS_ALLOWED_ORIGINS` に変更（旧名も読み込む）
+- 通知一覧取得 API の `status` に不正な値を指定した場合は 422 を返すよう修正
 ### version 1.0.0  2026/02
+- 初版
 """,
     version=settings.VERSION,
     log_level="info",
@@ -47,7 +67,9 @@ app = FastAPI(
 # ========================================
 # CORS設定: allow_credentials=Trueの場合、allow_origins=["*"]は使用不可
 # セキュリティ上、具体的なオリジンを指定すること
-cors_origins = settings.ALLOWED_HOSTS if settings.ALLOWED_HOSTS else []
+cors_origins = settings.CORS_ALLOWED_ORIGINS if settings.CORS_ALLOWED_ORIGINS else []
+if os.environ.get("ALLOWED_HOSTS") and not os.environ.get("CORS_ALLOWED_ORIGINS"):
+    logger.warning("ALLOWED_HOSTS is deprecated; use CORS_ALLOWED_ORIGINS for the CORS allowed origins")
 if "*" in cors_origins and settings.IS_PRODUCTION:
     logger.warning("CORS: Wildcard origin '*' is not recommended in production")
 
@@ -58,6 +80,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
+app.add_middleware(ConditionalRequestMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(CommonSecurityHeadersMiddleware)
 app.add_middleware(ContentTypeMiddleware)
@@ -108,6 +131,22 @@ def custom_openapi():
     for path, path_item in paths.items():
         for method, operation in path_item.items():
             if method in ["get", "post", "put", "delete", "patch"]:
+                # 個別リソース取得（パスパラメータあり）のみLast-Modified/If-Modified-Sinceに対応
+                is_resource_get = method == "get" and "{" in path
+                if method == "get":
+                    get_headers = dict(GET_RESPONSE_HEADERS)
+                    request_parameters = list(GET_REQUEST_PARAMETERS)
+                    if is_resource_get:
+                        get_headers.update(GET_RESOURCE_RESPONSE_HEADERS)
+                        request_parameters += GET_RESOURCE_REQUEST_PARAMETERS
+                    operation["parameters"] = operation.get("parameters", []) + request_parameters
+                    # 304レスポンスを200の直後に追加
+                    operation["responses"] = {
+                        **{k: v for k, v in operation["responses"].items() if k == "200"},
+                        "304": dict(NOT_MODIFIED_RESPONSE),
+                        **{k: v for k, v in operation["responses"].items() if k != "200"},
+                    }
+
                 responses = operation.get("responses", {})
                 for status_code, response in responses.items():
                     # 既存のheadersを取得、なければ空dictを作成
@@ -116,9 +155,9 @@ def custom_openapi():
                     for header_name, header_def in COMMON_RESPONSE_HEADERS.items():
                         if header_name not in headers:
                             headers[header_name] = header_def
-                    # GETメソッドのみETag/Last-Modifiedを追加
-                    if method == "get":
-                        for header_name, header_def in GET_RESPONSE_HEADERS.items():
+                    # GETの200/304レスポンスのみETag/Last-Modifiedを追加
+                    if method == "get" and status_code in ("200", "304"):
+                        for header_name, header_def in get_headers.items():
                             if header_name not in headers:
                                 headers[header_name] = header_def
                     response["headers"] = headers

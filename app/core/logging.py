@@ -322,12 +322,6 @@ class ExtraAdapter(logging.LoggerAdapter):
         # ログ呼び出し時に渡されたカスタム引数を extra にマージ
         kwargs['extra'].update(custom_kwargs)
 
-        # 4. stacklevelを調整（ExtraAdapterを経由するため+1）
-        if 'stacklevel' not in kwargs:
-            kwargs['stacklevel'] = 2
-        else:
-            kwargs['stacklevel'] += 1
-
         return msg, kwargs
 
 
@@ -552,11 +546,13 @@ def log_execution_time(logger: logging.Logger, log_level: str = 'debug'):
                 result = func(*args, **kwargs)
                 execution_time = time.perf_counter() - start_time
 
+                # module / line には wrapper ではなく、デコレートした関数の呼び出し元を記録する
                 log_method = getattr(logger, log_level)
                 log_method(
                     f"Function '{func.__name__}' executed",
                     function=func.__name__,
-                    execution_time_ms=f"{execution_time * 1000:.2f}"
+                    execution_time_ms=f"{execution_time * 1000:.2f}",
+                    stacklevel=2
                 )
                 return result
             except Exception as e:
@@ -566,7 +562,8 @@ def log_execution_time(logger: logging.Logger, log_level: str = 'debug'):
                     function=func.__name__,
                     execution_time_ms=f"{execution_time * 1000:.2f}",
                     error=str(e),
-                    exc_info=True
+                    exc_info=True,
+                    stacklevel=2
                 )
                 raise
         return wrapper

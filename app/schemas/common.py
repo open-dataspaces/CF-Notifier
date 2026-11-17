@@ -12,7 +12,7 @@ class CommonRequestHeaders(BaseSchema):
     user_agent: str = Header(..., alias="User-Agent", description="User-Agent",convert_underscores=False)
     x_tracking_id: str = Header(..., alias="X-TrackingId", description="X-TrackingId",convert_underscores=False)
     accept_language: str = Header("ja-JP", alias="Accept-Language", description="Accept-Language",convert_underscores=False)
-    x_notifier_api_key: str = Header(..., alias="x-notifier-api-key", description="x-notifier-api-key",convert_underscores=False)
+    x_notifier_api_key: str = Header(..., alias="X-Notifier-API-Key", description="X-Notifier-API-Key",convert_underscores=False)
     
     # Pydantic v2 の設定 (populate_by_name=True が重要)
     model_config = ConfigDict(

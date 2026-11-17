@@ -1,4 +1,5 @@
 """Notification Targets Schemas"""
+from datetime import datetime
 from typing import Optional, List
 from pydantic import Field, ConfigDict, field_validator
 from uuid import UUID
@@ -66,6 +67,7 @@ class NotificationTargetUpdateRequest(BaseSchema):
     name: str = Field(..., min_length=1, max_length=255, description="通知先リスト名")
     owner_id: str = Field(..., min_length=1, max_length=255, description="リスト所有者ID")
     target_ids: List[str] = Field(..., min_length=1, description="通知受信者IDリスト")
+    updated_at: datetime = Field(..., description="更新日時（楽観的排他制御用。取得時の updated_at をそのまま指定し、不一致の場合は409）")
 
     model_config = ConfigDict(
         extra="forbid",  # 未定義フィールドを即座に拒否
@@ -100,8 +102,9 @@ class NotificationTargetUpdateRequest(BaseSchema):
 
 class NotificationTargetResponse(NotificationTargetBase):
     """作成・取得時に返却するスキーマ"""
+    updated_at: datetime = Field(..., description="更新日時")
+
     model_config = ConfigDict(from_attributes=True)
-    pass
 
 
 class NotificationTargetListResponse(BaseSchema):

@@ -41,5 +41,6 @@ class BaseRepository:
                 'error_type': type(error).__name__,
                 'error_message': str(error)
             },
-            exc_info=True
+            exc_info=True,
+            stacklevel=2
         )

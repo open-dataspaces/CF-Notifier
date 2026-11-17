@@ -1,7 +1,8 @@
 """Application Configuration"""
-from typing import List, Literal
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import computed_field, field_validator
+import json
+from typing import Annotated, List, Literal
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from pydantic import AliasChoices, Field, computed_field, field_validator
 
 
 class Settings(BaseSettings):
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
     # L3 ACCESS (環境変数から取得 - デフォルト値なし)
     L3_BASE_URL: str = ""
     L3_INTROSPECT_ENDPOINT: str = "/auth/token/introspect"
+    L3_AUTHZ_EVALUATION_ENDPOINT: str = "/authz/stores/{store_id}/access/v1/evaluation"
     L3_API_KEY: str = ""
     L3_CLIENT_ID: str = ""
     L3_CLIENT_SECRET: str = ""
@@ -59,15 +61,13 @@ class Settings(BaseSettings):
     # 認可サービス設定
     # ===========================================
     AUTHZ_ENABLED: bool = False
-    AUTHZ_BASE_URL: str = ""
-    AUTHZ_OPENFGA_STORE_ID: str = ""
-    AUTHZ_OPENFGA_MODEL_ID: str = ""
+    AUTHZ_STORE_ID: str = ""  # Notifier のAPI実行権限を登録した L3 の認可ストアID
 
     # ===========================================
     # Application
     # ===========================================
     PROJECT_NAME: str = "Notifier API"
-    VERSION: str = "1.0.0"
+    VERSION: str = "1.2.0"
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
@@ -81,7 +81,10 @@ class Settings(BaseSettings):
     # ===========================================
     # CORS (本番環境では具体的なオリジンを指定すること)
     # ===========================================
-    ALLOWED_HOSTS: List[str] = []
+    # 旧名 ALLOWED_HOSTS も経過措置として読み込む（両方ある場合は CORS_ALLOWED_ORIGINS を優先）
+    CORS_ALLOWED_ORIGINS: Annotated[List[str], NoDecode] = Field(
+        default=[], validation_alias=AliasChoices("CORS_ALLOWED_ORIGINS", "ALLOWED_HOSTS")
+    )
 
     @field_validator('SECRET_KEY')
     @classmethod
@@ -90,14 +93,17 @@ class Settings(BaseSettings):
         # 開発環境では空でも許容（他のバリデータで環境をチェック）
         return v
 
-    @field_validator('ALLOWED_HOSTS', mode='before')
+    @field_validator('CORS_ALLOWED_ORIGINS', mode='before')
     @classmethod
-    def parse_allowed_hosts(cls, v):
-        """CORS_ORIGINSをパース（カンマ区切り文字列またはリスト）"""
+    def parse_cors_allowed_origins(cls, v):
+        """CORS_ALLOWED_ORIGINSをパース（カンマ区切り文字列・JSON 配列・リスト）"""
         if isinstance(v, str):
+            v = v.strip()
             if not v:
                 return []
-            return [host.strip() for host in v.split(',')]
+            if v.startswith('['):
+                return json.loads(v)
+            return [host.strip() for host in v.split(',') if host.strip()]
         return v
     
     # ===========================================
